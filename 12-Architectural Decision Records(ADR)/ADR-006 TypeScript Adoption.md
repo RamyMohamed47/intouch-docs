@@ -202,3 +202,11 @@ Examples include:
 - Validation schemas
 
 For the MVP, all TypeScript types will remain within the backend project.
+
+## Shared Contracts
+
+REST DTOs and Socket.IO payloads will be defined using shared Zod schemas.
+
+TypeScript types will be inferred from these schemas rather than written manually.
+
+This provides a single source of truth for validation and typing across the backend and frontend.

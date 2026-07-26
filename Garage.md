@@ -13,3 +13,4 @@
 - Threaded conversations
 - Mobile app
 - PWA support
+- Read receipts

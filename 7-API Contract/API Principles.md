@@ -155,3 +155,12 @@ Every organization-aware endpoint must verify:
 - Keep responses consistent.
 - Keep business logic out of controllers.
 - Design around resources, not actions.
+
+___
+# DTO Strategy
+
+REST request and response DTOs will be defined using shared Zod schemas.
+
+The backend and frontend will consume the same contracts.
+
+TypeScript types will be inferred directly from the schemas.
