@@ -10,7 +10,7 @@ A multi-tenant real-time communication platform inspired by Discord and Slack.
 
 - [[Product Vision]]
 - [[Requirements]]
-- [[Architecture]]
+- [[InTouch/3-Architecture/Architecture]]
 - [[Database Design]]
 - [[API Design]]
 - [[Socket Events]]
