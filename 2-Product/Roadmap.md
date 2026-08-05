@@ -3,25 +3,25 @@
 ## v1.0 - MVP
 
 ### Authentication
-- [ ] Register
-- [ ] Login
-- [ ] JWT
-- [ ] Refresh Tokens
-- [ ] Google OAuth
+- [x] Register
+- [x] Login
+- [x] JWT
+- [x] Refresh Tokens
+- [x] Google OAuth
 
 ### Organizations
-- [ ] Create Organization
-- [ ] Invite Members
-- [ ] Join Organization
+- [x] Create Organization
+- [x] Invite Members
+- [x] Join Organization
 
-### Channels
-- [ ] Categories
-- [ ] Public Channels
-- [ ] Private Channels
+### Conversation
+- [x] Categories
+- [x] Public Channels
+- [x] Private Channels
 
 ### Messaging
-- [ ] Real-time messaging
-- [ ] Direct Messages
+- [x] Real-time messaging
+- [x] Direct Messages
 - [ ] Typing Indicator
 - [ ] Online Presence
 - [ ] Read Receipts

@@ -10,6 +10,8 @@ This directory contains the major architectural decisions made during the design
 | ADR-002 | MongoDB Selection         | Accepted |
 | ADR-003 | Conversation Model        | Accepted |
 | ADR-004 | Identity Linking Strategy | Accepted |
+| ADR-005 | Unified Application Layer | Accepted |
+| ADR-006 | Typescript Adoption       | Accepted |
 
 Each ADR documents:
 

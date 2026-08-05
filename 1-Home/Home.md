@@ -20,5 +20,9 @@ A multi-tenant real-time communication platform inspired by Discord and Slack.
 
 ## Decisions
 
-- [[ADR-002 MongoDB]]
-- [[ADR-002 Multi-tenancy]] 
+- [[ADR-001 Multi-Tenancy Strategy]]
+- [[ADR-002 MongoDB]] 
+- [[ADR-003 Conversation Model]]
+- [[ADR-004 Identity Linking Strategy]]
+- [[ADR-005 Unified Application Layer]]
+- [[ADR-006 TypeScript Adoption]]
