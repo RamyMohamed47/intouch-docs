@@ -216,6 +216,26 @@ erDiagram
 
   
 
+    MessageReaction {
+
+        ObjectId id
+
+        ObjectId conversationId
+
+        ObjectId messageId
+
+        ObjectId userId
+
+        string emoji
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
     ConversationReadState {
 
         ObjectId id
@@ -305,6 +325,18 @@ erDiagram
   
 
     User ||--o{ Message : sends
+
+  
+
+    Message ||--o{ MessageReaction : receives
+
+  
+
+    Conversation ||--o{ MessageReaction : scopes
+
+  
+
+    User ||--o{ MessageReaction : selects
 
   
 
@@ -414,7 +446,19 @@ conversation. It is unique by `(conversationId, userId)`. Unread counts exclude
 
 the reader's own and deleted messages after `lastReadMessageId`. Organization
 
-and conversation deletion remove read states in the same transaction.
+and conversation deletion remove read states in the same transaction. Direct
+
+conversation DTOs expose both the caller's state and the peer's state; channel
+
+reader state remains private and is used for that reader's unread count. The
+
+`(conversationId, lastReadMessageId, lastReadAt)` index supports sender-only
+
+channel reader summaries. Those summaries are derived by joining current
+
+organization memberships and, for private channels, current participants; no
+
+separate receipt-detail collection is stored.
 
   
 
@@ -431,3 +475,23 @@ Deleted messages remain as redacted timeline tombstones: `content` is nullable
 only when `deletedAt` is set. Messages and conversation participants are removed
 
 transactionally when their channel or organization is deleted.
+
+  
+
+`MessageReaction` stores one normalized Unicode emoji sequence per user and
+
+message. A unique `(messageId, userId)` index enforces the one-reaction rule;
+
+`(conversationId, messageId, emoji)` and `(messageId, emoji, id)` indexes support
+
+summary aggregation, cleanup, and cursor-paginated reactor lists. Personalized
+
+reaction summaries are derived from current memberships and, for private
+
+channels and direct messages, current participant records. Message redaction,
+
+conversation deletion, organization deletion, private-participant removal, and
+
+public-to-private visibility transitions delete reactions that no longer have a
+
+valid lifecycle or authorized owner.

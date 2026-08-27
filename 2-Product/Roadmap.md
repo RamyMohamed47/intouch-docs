@@ -22,9 +22,9 @@
 ### Messaging
 - [x] Real-time messaging
 - [x] Direct Messages
-- [ ] Typing Indicator
-- [ ] Online Presence
-- [ ] Read Receipts
+- [x] Typing Indicator
+- [x] Online Presence
+- [x] Read Receipts
 
 ---
 
@@ -36,6 +36,7 @@
 - [ ] Notifications
 - [ ] Edit messages
 - [ ] Delete messages
+- [ ] Chat Wallpapers
 
 ---
 
@@ -46,9 +47,9 @@ Infrastructure improvements
 - [ ] Redis
 - [ ] BullMQ
 - [ ] Docker
-- [ ] Logging
+- [x] Logging
 - [ ] Monitoring
-- [ ] Rate Limiting
+- [x] Rate Limiting
 
 ---
 
