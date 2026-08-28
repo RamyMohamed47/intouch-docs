@@ -30,13 +30,15 @@
 
 ## v1.1
 
-- [ ] Emoji reactions
+- [x] Emoji reactions
 - [ ] File uploads
-- [ ] Search
-- [ ] Notifications
-- [ ] Edit messages
-- [ ] Delete messages
 - [ ] Chat Wallpapers
+- [x] Edit messages
+- [x] Delete messages
+- [x] Search
+- [x] Notifications
+- [x] Mail Service
+
 
 ---
 

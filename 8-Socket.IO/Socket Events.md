@@ -172,11 +172,21 @@ the next heartbeat within approximately three seconds.
 
 - `message-reactions:changed` carries `{ activityId, conversationId, messageId }` after a reaction transaction commits. It contains no reactor identity and is scoped to the authorized conversation room. Clients handle duplicate activity IDs idempotently and fetch `GET /api/v1/messages/:messageId/reactions` before merging authoritative personalized summaries.
 
+- `notification:changed` is delivered only to the affected `user:<userId>` room. It is a strict union of `UPSERTED` with a safe hydrated notification DTO, `DELETED` with a notification ID, and `READ_ALL`. Clients handle events idempotently, invalidate the notification query family, and use MongoDB-backed REST state to reconcile after reconnecting.
+
   
 
 Messages are written through REST. Socket.IO only manages authorized room
 
 subscriptions and scoped server events; no event is broadcast globally.
+
+  
+
+Organization search has no Socket.IO event. Atlas and native indexes are
+
+eventually consistent read models; the frontend issues debounced REST searches
+
+and opens exact message context through the message-context endpoint.
 
   
 
@@ -252,6 +262,26 @@ post-commit invalidation rather than personalized reaction data, so every client
 
 reconciles against MongoDB and stale or unauthorized reactor identities cannot
 
-leak through room events. Reaction changes do not create notifications, unread
+leak through room events. Reactions to another user's message create a durable,
 
-counts, last-message activity, or typing/read-receipt changes.
+recipient-only notification, but they do not change conversation unread counts,
+
+last-message activity, typing state, or read receipts.
+
+  
+
+Notification mutations originate from REST-backed domain transactions rather
+
+than client socket events. Invitation notifications are created and removed with
+
+the invitation lifecycle, accepted-invitation notifications target the inviter,
+
+incoming DMs are grouped until the recipient advances their read state, and
+
+reaction notifications target the message sender. Selected incoming DMs and
+
+invitation events may produce frontend toasts; reaction notifications remain
+
+silent. Reconnects invalidate the notification query family so missed socket
+
+events never become the durable source of truth.
