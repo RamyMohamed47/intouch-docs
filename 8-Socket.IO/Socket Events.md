@@ -150,11 +150,17 @@ the next heartbeat within approximately three seconds.
 
   
 
-- `message:created` carries the non-personalized message core DTO.
+- `message:created` carries the non-personalized message core DTO, including
 
-- `message:updated` carries the non-personalized updated message core DTO.
+  safe attachment metadata when present.
 
-- `message:deleted` carries the non-personalized redacted message tombstone.
+- `message:updated` carries the non-personalized updated message core DTO;
+
+  attachment metadata remains immutable while the caption may change.
+
+- `message:deleted` carries the non-personalized redacted message tombstone and
+
+  an empty attachment list after private objects are queued for deletion.
 
 - `membership:joined` carries `{ organizationId, userId }` after an invitation acceptance or public join commits. Organization subscribers invalidate that organization's safe member roster; the event is an invalidation signal and does not duplicate user profile data.
 
@@ -179,6 +185,12 @@ the next heartbeat within approximately three seconds.
 Messages are written through REST. Socket.IO only manages authorized room
 
 subscriptions and scoped server events; no event is broadcast globally.
+
+Attachment object keys, storage credentials, ETags, and presigned URLs are
+
+never emitted. Clients resolve each opaque attachment asset ID through the
+
+authorized REST access endpoint and refresh its short-lived URL when needed.
 
   
 
@@ -226,19 +238,35 @@ reserve their layout space, and avoid reannouncing repeated heartbeats.
 
   
 
-Presence and typing use replaceable in-memory stores in this iteration. The
+Presence and typing use replaceable stores. Local development defaults to
 
-backend must run as one application instance. A multi-instance deployment needs
+in-memory state. Production uses Redis leases and the Socket.IO Redis adapter,
 
-Redis-backed stores plus the Socket.IO Redis adapter. Process restarts clear
+so rooms, broadcasts, typing state, presence, authenticated abuse counters, and
 
-runtime presence and typing; clients reconnect and rebuild subscriptions.
+active-socket limits are shared across API replicas.
 
-Authenticated abuse counters and active-socket accounting are also
+  
 
-process-local and require Redis-backed implementations before horizontal API
+Sockets renew their presence and connection leases every 15 seconds. A normal
 
-scaling.
+final disconnect keeps the five-second offline grace period. If a replica dies
+
+without disconnect cleanup, the 45-second socket lease expires and the same
+
+grace period runs before the user is persisted and broadcast as offline. Typing
+
+heartbeats remain three seconds with a five-second expiry. Expired transitions
+
+are atomically claimed so only one replica emits the final update.
+
+  
+
+The browser uses WebSocket transport only. Redis unavailability makes the API
+
+unready and protected runtime operations fail closed; production never falls
+
+back to isolated memory state.
 
   
 

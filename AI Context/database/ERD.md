@@ -16,6 +16,12 @@ erDiagram
 
         string avatarUrl
 
+        ObjectId avatarAssetId
+
+        enum emailVerificationStatus
+
+        datetime emailVerifiedAt
+
         datetime lastSeenAt
 
         LoginProvider[] loginProviders
@@ -64,6 +70,62 @@ erDiagram
 
   
 
+    AuthActionToken {
+
+        string id
+
+        ObjectId userId
+
+        enum purpose
+
+        string secretHash
+
+        datetime expiresAt
+
+        datetime createdAt
+
+    }
+
+  
+
+    MailOutbox {
+
+        ObjectId id
+
+        string aggregateKey
+
+        enum kind
+
+        string ciphertext
+
+        string iv
+
+        string authTag
+
+        enum status
+
+        int attempts
+
+        datetime availableAt
+
+        datetime dispatchedAt
+
+        datetime leaseUntil
+
+        datetime expiresAt
+
+        datetime sentAt
+
+        datetime purgeAt
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
     Organization {
 
         ObjectId id
@@ -72,7 +134,7 @@ erDiagram
 
         string slug
 
-        string logoUrl
+        ObjectId logoAssetId
 
         enum visibility
 
@@ -254,15 +316,89 @@ erDiagram
 
   
 
-    Attachment {
+    ChatWallpaperPreference {
 
         ObjectId id
 
+        ObjectId userId
+
+        ObjectId conversationId
+
+        enum wallpaperId
+
+        int dimming
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
+    StoredAsset {
+
+        ObjectId id
+
+        ObjectId ownerUserId
+
+        ObjectId organizationId
+
+        ObjectId conversationId
+
         ObjectId messageId
 
-        string url
+        enum purpose
 
-        string mimeType
+        enum status
+
+        string stagingKey
+
+        string objectKey
+
+        string fileName
+
+        string declaredContentType
+
+        int declaredSize
+
+        string verifiedContentType
+
+        int verifiedSize
+
+        enum kind
+
+        string etag
+
+        datetime expiresAt
+
+        datetime promotionLeaseUntil
+
+        datetime cleanupLeaseUntil
+
+        int cleanupAttempts
+
+        datetime cleanupAvailableAt
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
+    UploadDailyUsage {
+
+        ObjectId id
+
+        ObjectId userId
+
+        string dayKey
+
+        int bytes
+
+        datetime expiresAt
 
     }
 
@@ -272,13 +408,41 @@ erDiagram
 
         ObjectId id
 
-        ObjectId userId
+        ObjectId recipientUserId
+
+        ObjectId actorUserId
+
+        ObjectId organizationId
 
         enum type
 
-        boolean isRead
+        ObjectId invitationId
+
+        ObjectId conversationId
+
+        enum conversationType
+
+        ObjectId messageId
+
+        ObjectId latestMessageId
+
+        string emoji
+
+        int messageCount
+
+        string dedupeKey
+
+        string activeGroupKey
+
+        datetime readAt
+
+        datetime lastActivityAt
+
+        datetime expiresAt
 
         datetime createdAt
+
+        datetime updatedAt
 
     }
 
@@ -289,6 +453,8 @@ erDiagram
     User ||--o{ LoginProvider : embeds
 
     User ||--o{ AuthSession : authenticates
+
+    User ||--o{ AuthActionToken : authorizes_email_action
 
     Organization ||--o{ Membership : has
 
@@ -348,11 +514,63 @@ erDiagram
 
   
 
-    Message ||--o{ Attachment : has
+    User ||--o{ ChatWallpaperPreference : customizes
+
+  
+
+    Conversation ||--o{ ChatWallpaperPreference : overrides
+
+  
+
+    User ||--o{ StoredAsset : owns
+
+  
+
+    User o|--o| StoredAsset : uses_avatar
+
+  
+
+    Organization o|--o| StoredAsset : uses_logo
+
+  
+
+    Organization ||--o{ StoredAsset : accounts_storage
+
+  
+
+    Conversation ||--o{ StoredAsset : scopes
+
+  
+
+    Message ||--o{ StoredAsset : attaches
+
+  
+
+    User ||--o{ UploadDailyUsage : reserves
 
   
 
     User ||--o{ Notification : receives
+
+  
+
+    User ||--o{ Notification : acts
+
+  
+
+    Organization ||--o{ Notification : scopes
+
+  
+
+    Invitation ||--o| Notification : references
+
+  
+
+    Conversation ||--o{ Notification : references
+
+  
+
+    Message ||--o{ Notification : references
 
 ```
 
@@ -362,9 +580,45 @@ erDiagram
 
 The pair of `provider` and `providerAccountId` is uniquely indexed across users.
 
-New users/provider links and their initial `AuthSession` are committed in one
+Google users/provider links and their initial `AuthSession` are committed in
 
-MongoDB transaction.
+one MongoDB transaction. Password registration instead commits a pending user,
+
+a single-use verification token, and its encrypted outbox job atomically; it
+
+does not create an authenticated session until the user confirms the email and
+
+logs in.
+
+  
+
+`AuthActionToken` stores only an HMAC of the opaque token secret. Tokens are
+
+unique per `(userId, purpose)`, expire through a TTL index, and are consumed
+
+atomically. Email-confirmation tokens live for 24 hours; password-reset tokens
+
+live for 15 minutes. Successful password reset also confirms the email and
+
+deletes every refresh session for that user in the same transaction.
+
+  
+
+`MailOutbox` is the transactional boundary between MongoDB changes and the
+
+configured mail provider.
+
+Sensitive recipient/token payloads are AES-256-GCM encrypted at rest. A unique
+
+aggregate key supersedes pending verification/reset jobs. `dispatchedAt`
+
+supports idempotent BullMQ reconciliation while repository leases, bounded
+
+retries, and TTL cleanup preserve MongoDB as the durable source of truth.
+
+Delivery happens after the surrounding database transaction commits; provider
+
+failure never leaves an orphaned account or invitation mutation.
 
   
 
@@ -398,7 +652,11 @@ Invitation documents represent pending invitations only. They are unique by
 
 `(organizationId, invitedUserId)`, expire after seven days, and are deleted when
 
-accepted, declined, or when the organization is deleted.
+accepted, declined, or when the organization is deleted. Creating a pending
+
+invitation queues its email in the same transaction; consuming or deleting the
+
+invitation cancels a still-pending outbox job.
 
   
 
@@ -462,19 +720,75 @@ separate receipt-detail collection is stored.
 
   
 
+`ChatWallpaperPreference` stores private, per-user presentation preferences.
+
+`conversationId = null` represents the user's default; a conversation ID
+
+represents an override visible only to that user. A unique
+
+`(userId, conversationId)` index permits one preference per scope, and a
+
+conversation cleanup index supports transactional channel and organization
+
+deletion. Preset IDs are platform-neutral shared contracts; image files remain
+
+client assets rather than database content.
+
+  
+
 Online presence and typing are runtime-only state. `User.lastSeenAt` is the only
 
 persisted presence field and is updated after the user's final socket has been
 
-offline for the disconnect grace period.
+offline for the disconnect grace period. Production runtime state is held in
+
+Redis with expiring socket leases; no Redis presence or typing keys are part of
+
+the durable MongoDB data model.
 
   
 
-Deleted messages remain as redacted timeline tombstones: `content` is nullable
+Deleted messages remain as redacted timeline tombstones. `content` is also
 
-only when `deletedAt` is set. Messages and conversation participants are removed
+nullable for attachment messages whose optional caption is absent. Messages and
 
-transactionally when their channel or organization is deleted.
+conversation participants are removed transactionally when their channel or
+
+organization is deleted.
+
+  
+
+`StoredAsset` is the authoritative metadata record for every private R2 object.
+
+`PENDING` objects use random staging keys; successful signature verification and
+
+an ETag-conditional copy produce immutable final keys and `PROMOTED` records.
+
+Message creation, avatar replacement, and organization-logo assignment claim
+
+promoted assets as `READY` in the same MongoDB transaction as the domain
+
+mutation. Message redaction, conversation deletion, organization deletion,
+
+avatar replacement, and logo replacement mark
+
+claimed assets `DELETE_PENDING`; a leased worker removes staging/final objects
+
+and then deletes their records with bounded retry backoff. BullMQ schedules the
+
+cleanup by opaque asset ID in production; MongoDB leases and attempt counters
+
+remain authoritative and allow polling fallback. Object keys and
+
+presigned URLs never enter public DTOs. Owner/status, organization/status,
+
+message, and cleanup indexes support limits, hydration, and lifecycle work.
+
+`UploadDailyUsage` atomically reserves issued bytes per `(userId, UTC day)` and
+
+expires through a TTL index. Pending and promoted message assets count against
+
+organization storage until claimed or purged.
 
   
 
@@ -495,6 +809,34 @@ conversation deletion, organization deletion, private-participant removal, and
 public-to-private visibility transitions delete reactions that no longer have a
 
 valid lifecycle or authorized owner.
+
+  
+
+`Notification` stores durable, recipient-specific in-app activity for pending
+
+organization invitations, accepted invitations, incoming direct messages, and
+
+reactions to the recipient's messages. Invitation and reaction notifications
+
+use deterministic deduplication keys. Consecutive unread direct messages from
+
+the same conversation share an `activeGroupKey`, increment `messageCount`, and
+
+advance `latestMessageId`; advancing the recipient's DM read state closes that
+
+group. Notifications expire through `expiresAt` after 30 days, except pending
+
+invitation notifications, which expire with their seven-day invitation. The
+
+recipient/activity, unread-recipient, unique deduplication, active-group,
+
+lifecycle-cleanup, and TTL indexes support inbox pagination, unread counts,
+
+idempotency, and transactional deletion. Notification creation and cleanup
+
+participate in the source domain transaction; Socket.IO publication occurs only
+
+after commit and carries safe hydrated DTOs to the recipient's user room.
 
   
 

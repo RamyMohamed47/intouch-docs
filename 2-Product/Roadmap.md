@@ -31,8 +31,8 @@
 ## v1.1
 
 - [x] Emoji reactions
-- [ ] File uploads
-- [ ] Chat Wallpapers
+- [x] File uploads
+- [x] Chat Wallpapers
 - [x] Edit messages
 - [x] Delete messages
 - [x] Search
@@ -46,12 +46,24 @@
 
 Infrastructure improvements
 
-- [ ] Redis
+- [x] Redis
+		├── Presence
+		 ├── Typing
+		  ├── Socket.IO adapter
+		   └── Distributed rate limiting (optional)
 - [ ] BullMQ
+		└── Async email/notification jobs
 - [ ] Docker
+		├── MongoDB
+		 └── Redis
+		  └── API/worker containers
 - [x] Logging
 - [ ] Monitoring
+		├── Health checks
+		 ├── Metrics
+		   └── Error monitoring
 - [x] Rate Limiting
+
 
 ---
 
@@ -63,3 +75,4 @@ Advanced Features
 - [ ] Video Calls
 - [ ] AI Assistant
 - [ ] Mobile App
+- [ ] Load testing
