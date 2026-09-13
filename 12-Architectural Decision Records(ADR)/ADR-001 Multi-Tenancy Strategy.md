@@ -1,126 +1,47 @@
+# ADR-001: Shared-Database Multi-Tenancy
 
-## Status
-
-Accepted
-
----
-
-## Context
-
-InTouch is designed as a Software-as-a-Service (SaaS) application where multiple organizations (tenants) share the same infrastructure while remaining completely isolated from one another.
-
-The application must support users belonging to multiple organizations without exposing one organization's data to another.
-
----
+- **Status:** Accepted
 
 ## Decision
 
-InTouch will use a **Single Database, Shared Collections** multi-tenancy strategy.
+Use one MongoDB database and shared collections. Tenant-owned records carry an `organizationId`, and services resolve the owning organization before authorizing access. Private channels and direct messages additionally require an active participant record.
 
-All tenant-specific resources will contain an `organizationId` field that identifies the owning organization.
+Users, authentication sessions, action tokens, default wallpaper preferences, and push installations are user-scoped rather than tenant-owned. Any operation that enters an organization or conversation context still proves membership/access explicitly.
 
-Examples include:
 
-- Categories
-- Conversations
-- Messages
-- Memberships
+## Decision Trade-offs
 
-Users exist globally and are not owned by any organization.
+### Chosen: Shared database and shared collections
 
-Relationships between users and organizations are represented through the Membership collection.
+**Pros**
 
----
+- One schema and migration path serves every organization.
+- Operational cost and connection management stay low at the current scale.
+- Cross-organization features can reuse one repository and transaction model.
 
-## Architecture
+**Cons**
 
-```text
-                User
-                  │
-                  │
-             Membership
-                  │
-                  │
-            Organization
-                  │
-      ┌───────────┴───────────┐
-      │                       │
- Category                Conversation
-                              │
-                           Message
-```
+- Every query, index, cache key, event, and provider operation must preserve tenant scope.
+- A missed authorization predicate can create a cross-tenant disclosure risk.
+- Per-tenant restore and physical isolation are harder than database-per-tenant designs.
 
----
+### Alternative: Database per organization
 
-## Authorization Strategy
+**Pros**
 
-Every request that accesses organization resources must verify:
+- Strong physical isolation and simpler tenant-specific export or restore.
+- A tenant can be moved or scaled independently.
 
-1. The requested resource belongs to the specified organization.
-2. The authenticated user is a member of that organization.
+**Cons**
 
-This ensures complete tenant isolation.
-
----
-
-## Query Pattern
-
-Example:
-
-```javascript
-Conversation.find({
-    organizationId: currentOrganizationId
-})
-```
-
-Every tenant-aware query must include `organizationId`.
-
----
-
-## Alternatives Considered
-
-### Database Per Tenant
-
-Pros
-
-- Strong isolation
-- Easier tenant backups
-- Separate scaling
-
-Cons
-
-- Operational complexity
-- Difficult migrations
-- Higher infrastructure cost
-- Unnecessary for the expected project scale
-
----
-
-### Collection Per Tenant
-
-Pros
-
-- Logical separation
-
-Cons
-
-- Difficult to maintain
-- Large number of collections
-- Poor scalability
-
----
+- High connection, migration, monitoring, and provisioning overhead.
+- Cross-tenant operational queries and shared deployments become more complex.
 
 ## Consequences
 
-### Advantages
+- A single deployment can serve many organizations without database-per-tenant operations.
+- Every repository query and unique index must include the correct tenant scope where applicable.
+- Socket rooms, Redis keys, search results, assets, Echo context, LiveKit credentials, and notifications must not be treated as alternative authorization mechanisms.
+- Cross-tenant tests are mandatory for public/private resources and provider boundaries.
 
-- Simple deployment
-- Lower operational overhead
-- Excellent fit for portfolio scale
-- Supports thousands of organizations
-- Easy horizontal scaling
-
-### Trade-offs
-
-- Every tenant-aware query must include `organizationId`.
-- Authorization mistakes could expose tenant data if queries are not properly scoped.
+Database-per-tenant isolation was rejected for the current scale because its migration, connection, and operational cost outweigh the benefit.

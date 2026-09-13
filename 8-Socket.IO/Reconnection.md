@@ -1,55 +1,13 @@
+# Reconnection
 
-## Overview
+Socket.IO reconnects transport, but application state restoration remains explicit.
 
-Network interruptions are expected.
+1. Refresh the access token if necessary.
+2. Reconnect with the current token.
+3. Resubscribe to the active organization and conversation.
+4. Re-fetch the member roster and reconcile conversation, message, notification, reaction, and receipt query families.
+5. Resume an authorized voice session through REST before reconnecting LiveKit; never infer media state from Socket.IO alone.
 
-Clients should automatically reconnect.
+The server does not replay an unbounded event log. MongoDB-backed REST resources are authoritative after missed events. Typing state is ephemeral and expires; presence and voice leases are repaired by Redis/provider reconciliation.
 
----
-
-# Reconnection Flow
-
-Connection lost
-
-↓
-
-Socket reconnects
-
-↓
-
-Authenticate again
-
-↓
-
-Rejoin rooms
-
-↓
-
-Resume communication
-
----
-
-# Server Responsibilities
-
-After successful authentication:
-
-- Restore room membership
-- Restore presence
-- Resume event delivery
-
----
-
-# Client Responsibilities
-
-The client should:
-
-- Detect reconnection
-- Re-authenticate
-- Restore active conversation
-
----
-
-# Future Improvements
-
-- Missed message synchronization
-- Offline message queue
+Mobile disconnects ordinary Socket.IO activity when backgrounded except where an active voice session requires its managed background lifecycle.

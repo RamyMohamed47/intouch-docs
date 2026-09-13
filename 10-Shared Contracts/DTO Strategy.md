@@ -1,12 +1,6 @@
-  
-
 # DTO Strategy
 
-  
-
 ## Purpose
-
-  
 
 DTOs define data crossing an external application boundary. They are not
 
@@ -14,21 +8,13 @@ domain models, Mongoose documents, repository records, or service dependency
 
 interfaces.
 
-  
-
 The shared `@intouch/shared` workspace is the source of truth for DTO schemas
 
-used by the API, web application, and future mobile clients.
-
-  
+used by the API, web application, and the Expo mobile application.
 
 ## Covered Boundaries
 
-  
-
 Every externally visible payload must originate from a Zod schema:
-
-  
 
 - REST request bodies, path parameters, and query parameters.
 
@@ -38,11 +24,7 @@ Every externally visible payload must originate from a Zod schema:
 
 - Socket.IO acknowledgements and server event payloads.
 
-  
-
 Types are always inferred from their schema:
-
-  
 
 ```ts
 
@@ -50,21 +32,13 @@ export type MessageDto = z.infer<typeof messageDtoSchema>;
 
 ```
 
-  
-
 Do not maintain a handwritten interface that duplicates an external payload.
 
-  
-
 ## Internal Types
-
-  
 
 Internal domain and persistence types remain ordinary TypeScript types when
 
 runtime boundary validation provides no value. This includes:
-
-  
 
 - Mongoose document shapes.
 
@@ -74,8 +48,6 @@ runtime boundary validation provides no value. This includes:
 
 - Service dependencies and internal provider/token structures.
 
-  
-
 Internal records must not be returned directly. A controller or transport
 
 adapter parses them through the relevant response schema first. Parsing both
@@ -84,11 +56,7 @@ serializes values such as `Date` to JSON-safe strings and strips fields that
 
 are not part of the public contract.
 
-  
-
 ## Placement
-
-  
 
 - Reusable contracts live under `packages/shared/<domain>`.
 
@@ -98,11 +66,7 @@ are not part of the public contract.
 
 - Response envelopes are schemas, not controller-local object types.
 
-  
-
 ## OpenAPI
-
-  
 
 OpenAPI 3.1 documents the same public shapes. Updating a DTO requires updating
 
@@ -112,11 +76,7 @@ the same change. OpenAPI must never be treated as an independent competing
 
 type source.
 
-  
-
 ## Enforcement
-
-  
 
 - Validate and normalize inbound DTOs before invoking a controller action.
 
@@ -126,17 +86,13 @@ type source.
 
 - Add contract tests for normalization, date serialization, field stripping,
 
-  and strict input rejection.
+  and strict input rejection.
 
 - Never expose domain models, persistence-only fields, credentials, hashes, or
 
-  provider metadata through a DTO.
-
-  
+  provider metadata through a DTO.
 
 ## Private Asset DTOs
-
-  
 
 Upload contracts expose opaque asset/upload IDs, verified display metadata,
 
@@ -156,8 +112,6 @@ Organization DTOs expose nullable `logoAssetId`; external organization logo
 
 URLs are not accepted or returned.
 
-  
-
 Message DTOs expose validated mention metadata and a nullable, safe reply
 
 preview. Mention ranges use JavaScript/UTF-16 offsets so web and React Native
@@ -167,8 +121,6 @@ select the same substring. Reply previews contain only the original message ID,
 public sender summary, message type, short excerpt, and deletion state; storage
 
 records and notification-deduplication metadata remain private.
-
-  
 
 Notification preferences are strict all-fields category replacements plus the
 

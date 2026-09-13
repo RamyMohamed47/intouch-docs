@@ -1,53 +1,11 @@
 # Socket Rooms
 
-## Overview
+| Room | Admission | Purpose |
+| --- | --- | --- |
+| `user:<userId>` | Automatic after JWT handshake | Recipient-specific notifications, call events, and inactive-conversation activity. |
+| `organization:<organizationId>` | Explicit subscribe plus current membership | Presence, membership, public-channel activity, and authorized workspace invalidation. |
+| `conversation:<conversationId>` | Explicit join plus current channel/DM access | Message facts, typing, receipts, reactions, and active-conversation lifecycle. |
 
-Socket.IO rooms isolate event delivery.
+Private-channel and direct-message delivery additionally verifies participant access. Actor exclusion is user-aware across all of an actor's sockets where required, not merely the socket that initiated an action.
 
-Rooms ensure events are only delivered to authorized users.
-
----
-
-# Room Types
-
-Organization Room
-
-organization:{organizationId}
-
-Conversation Room
-
-conversation:{conversationId}
-
----
-
-# Joining Rooms
-
-Users may only join rooms for organizations they belong to.
-
-Conversation membership must be validated before joining.
-
----
-
-# Leaving Rooms
-
-Sockets leave rooms when:
-
-- User switches conversations
-- User disconnects
-- Authorization changes
-
----
-
-# Multi-Connection Support
-
-One user may have multiple socket connections.
-
-Example
-
-User
-
-├── Desktop
-├── Mobile
-└── Browser
-
-Each socket independently joins the required rooms.
+Rooms are transport routing constructs, not authorization caches or durable subscriptions. Clients rejoin them after reconnect; the server rechecks policy each time.

@@ -1,53 +1,13 @@
 # Socket Authentication
 
-## Overview
+Connect with the current access JWT in the handshake:
 
-Sockets are authenticated using JWT access tokens.
+~~~ts
+io(API_ORIGIN, { auth: { accessToken } });
+~~~
 
-Authentication occurs immediately after establishing the socket connection.
+The server verifies the JWT before `connection`, associates the socket with the authenticated user, joins the user room, and enforces per-user socket limits. Missing, invalid, or expired credentials reject the connection through `connect_error.data`.
 
----
+The server disconnects sockets when their access token expires. The client refreshes through the appropriate REST browser/mobile flow, updates the socket auth payload, reconnects, then resubscribes to organization and conversation rooms and reconciles TanStack Query data.
 
-# Authentication Flow
-
-Client connects.
-
-↓
-
-Client emits
-
-auth:authenticate
-
-↓
-
-Server validates JWT.
-
-↓
-
-Server associates socket with authenticated user.
-
-↓
-
-Socket becomes authorized.
-
----
-
-# Authorization
-
-Authentication identifies the user.
-
-Authorization determines what resources the socket may access.
-
-Every room join request verifies:
-
-- Organization membership
-- Conversation access
-
----
-
-# Authentication Failure
-
-Invalid authentication results in:
-
-- Error event
-- Connection termination
+Room joins perform fresh membership/participant authorization. A valid token alone never authorizes organization or conversation data.

@@ -1,212 +1,55 @@
+# ADR-006: Strict TypeScript and Runtime Contracts
 
-## Status
-
-Accepted
-
----
-
-## Context
-
-InTouch is intended to be a production-quality portfolio project that demonstrates modern backend engineering practices.
-
-As the application grows, it will include:
-
-- Multiple services
-- Complex business logic
-- Real-time communication
-- Multi-tenancy
-- Authentication and authorization
-- Background jobs
-- Shared data models
-
-Using plain JavaScript increases the likelihood of runtime errors, inconsistent object structures, and duplicated assumptions across the codebase.
-
----
+- **Status:** Accepted
 
 ## Decision
 
-The backend will be developed using **TypeScript**.
+Use strict NodeNext TypeScript across API, web, mobile, and shared packages. Local ESM imports include `.js` specifiers intentionally. Public contracts are strict Zod schemas in `@intouch/shared`, with TypeScript types inferred from schemas.
 
-TypeScript will serve as the primary programming language for all backend code.
 
-The project will use TypeScript's **strict mode** to maximize type safety and detect errors during development rather than at runtime.
+## Decision Trade-offs
 
----
+### Chosen: Strict TypeScript plus shared Zod runtime contracts
 
-## TypeScript Configuration
+**Pros**
 
-The project will enable:
+- API, web, and mobile share discoverable types and runtime validation.
+- NodeNext catches import and boundary inconsistencies before deployment.
+- Schema-derived types reduce duplicated contract definitions.
 
-- `"strict": true`
-- `"noImplicitAny": true`
-- `"strictNullChecks": true`
+**Cons**
 
-The goal is to catch as many issues as possible during compilation.
+- Build/typecheck steps and strict migrations increase development effort.
+- Zod plus OpenAPI still requires disciplined coordinated updates.
+- React Native, Next.js, and Node toolchains can expose different TypeScript integration edge cases.
 
----
+### Alternative: TypeScript interfaces without runtime schemas
 
-## Guiding Principles
+**Pros**
 
-### Simplicity First
+- Lower runtime and authoring overhead.
 
-Use the simplest type that clearly communicates intent.
+**Cons**
 
-Avoid unnecessary type complexity.
+- Untrusted JSON remains unchecked at runtime.
+- Client/server types can claim safety while accepting malformed payloads.
 
----
+### Alternative: JavaScript or separately handwritten client types
 
-### Prefer Type Inference
+**Pros**
 
-Allow TypeScript to infer types whenever possible.
+- Fast initial prototyping and fewer compiler constraints.
 
-Avoid redundant type annotations.
+**Cons**
 
-Good example:
-
-```ts
-const organization = await organizationRepository.create(data);
-```
-
-Instead of:
-
-```ts
-const organization: Organization = await organizationRepository.create(data);
-```
-
-unless the explicit type improves readability.
-
----
-
-### Avoid `any`
-
-The `any` type should be avoided.
-
-If a value is unknown, prefer:
-
-```ts
-unknown
-```
-
-and narrow the type appropriately.
-
----
-
-### Interfaces for Domain Models
-
-Interfaces will describe domain entities.
-
-Examples include:
-
-- User
-- Organization
-- Membership
-- Conversation
-- Message
-
----
-
-### DTOs
-
-Data Transfer Objects (DTOs) will define the shape of incoming requests.
-
-Examples:
-
-- CreateOrganizationDto
-- RegisterUserDto
-- SendMessageDto
-
-DTOs improve validation and make service contracts explicit.
-
----
-
-### Enums
-
-Enums (or string literal unions where appropriate) will be used for fixed sets of values.
-
-Examples:
-
-- UserRole
-- ConversationType
-- MessageType
-- NotificationType
-
----
-
-### Shared Types
-
-Types that are shared across multiple modules should live in a dedicated shared types directory.
-
-This avoids duplication and keeps contracts consistent.
-
----
-
-## Benefits
-
-- Compile-time error detection.
-- Better IDE support and autocomplete.
-- Improved refactoring safety.
-- Self-documenting code.
-- Stronger service contracts.
-- Better maintainability.
-- Easier onboarding for future contributors.
-
----
-
-## Alternatives Considered
-
-### JavaScript
-
-Pros
-
-- Faster initial development.
-- Less syntax.
-- No compilation step.
-
-Cons
-
-- Runtime type errors.
-- Weaker tooling.
-- Less maintainable as complexity grows.
-
----
+- Contract drift is detected late through runtime bugs.
+- Refactors across API, web, and mobile become less reliable.
 
 ## Consequences
 
-### Advantages
+- API, Next.js, and Expo clients share compile-time types and runtime validation.
+- OpenAPI is coordinated documentation, not an independent competing type source.
+- Provider and persistence records remain private internal types and are mapped before crossing boundaries.
+- CI/root checks include formatting, lint, strict typechecking, tests, OpenAPI linting, and production builds.
 
-- Increased reliability.
-- Better developer experience.
-- Safer refactoring.
-- More maintainable architecture.
-- Professional codebase aligned with modern backend practices.
-
-### Trade-offs
-
-- Slightly steeper learning curve.
-- Additional build step.
-- More upfront effort to define types.
-
-These trade-offs are acceptable given the project's goals.
-
----
-
-## Future Considerations
-
-As the project evolves, shared types may be extracted into a common package if the backend and frontend begin sharing contracts.
-
-Examples include:
-
-- API request/response DTOs
-- Socket.IO event payloads
-- Shared enums
-- Validation schemas
-
-For the MVP, all TypeScript types will remain within the backend project.
-
-## Shared Contracts
-
-REST DTOs and Socket.IO payloads will be defined using shared Zod schemas.
-
-TypeScript types will be inferred from these schemas rather than written manually.
-
-This provides a single source of truth for validation and typing across the backend and frontend.
+JavaScript-only or independently duplicated client DTOs were rejected because they allow silent contract drift.

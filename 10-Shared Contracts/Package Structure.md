@@ -1,50 +1,24 @@
+# Shared Package Structure
 
-## Overview
+`packages/shared` is organized by domain:
 
-The implementation repository will contain a shared package that defines contracts used by both the backend and frontend.
+~~~text
+ai/                 Echo requests, streams, settings, quotas
+auth/               browser/mobile authentication contracts
+categories/         category inputs and DTOs
+chat-wallpapers/    preset and preference contracts
+common/             identifiers, dates, errors, health/readiness
+conversations/      channels, DMs, participants, receipts
+memberships/        roles, presence, invitations
+messages/           messages, mentions, replies, reactions
+notifications/      inbox, preferences, mutes
+organizations/      organization inputs and DTOs
+push/               installation/token registration
+realtime/           Socket.IO auth, acknowledgements, event maps
+search/             organization search requests/results
+uploads/            upload tickets, assets, attachment DTOs
+users/              safe user/profile DTOs
+voice/              sessions, calls, credentials, occupancy
+~~~
 
-The package is organized **by feature (domain)** rather than by artifact type.
-
-This keeps related schemas, types, enums, and utilities together, making the codebase easier to navigate and maintain as it grows.
-
----
-
-## Package Structure
-
-packages/
-
-    shared/
-
-        auth/
-            register.schema.ts
-            login.schema.ts
-            auth.types.ts
-
-        organizations/
-            create-organization.schema.ts
-            organization.types.ts
-
-        conversations/
-            create-conversation.schema.ts
-            conversation.types.ts
-
-        messages/
-            send-message.schema.ts
-            message.types.ts
-
-        socket/
-            events.ts
-            event-maps.ts
-
-        common/
-            pagination.schema.ts
-            api-response.schema.ts
-
----
-
-## Principles
-
-- Organize by feature.
-- Keep schemas close to their related types.
-- Keep shared utilities in a common module.
-- Avoid organizing solely by file type.
+Each domain exports runtime schemas and inferred types through package subpath exports. Build output under `dist` and local `node_modules` are generated artifacts, not source domains.

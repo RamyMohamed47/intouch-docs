@@ -1,102 +1,34 @@
+# Socket Flow
 
-## Initial Connection
+## Connection
 
-Client
+~~~mermaid
+sequenceDiagram
+  participant Client
+  participant Socket as Socket.IO
+  participant Redis
+  Client->>Socket: connect(auth.accessToken)
+  Socket->>Socket: verify JWT and limits
+  Socket->>Redis: create socket/presence lease
+  Socket-->>Client: connected
+  Client->>Socket: organization:subscribe
+  Socket->>Socket: verify membership
+  Socket-->>Client: typed acknowledgement
+~~~
 
-↓
+## Durable Message
 
-Connect
+~~~mermaid
+sequenceDiagram
+  participant Client
+  participant API
+  participant MongoDB
+  participant Socket as Socket.IO
+  Client->>API: POST /conversations/{id}/messages
+  API->>MongoDB: transaction: message, claims, notifications
+  MongoDB-->>API: commit
+  API-->>Client: 201 message DTO
+  API->>Socket: message:created after commit
+~~~
 
-↓
-
-Authenticate
-
-↓
-
-Join Organization Rooms
-
-↓
-
-Join Conversation Room
-
-↓
-
-Ready
-
----
-
-# Sending a Message
-
-Client
-
-↓
-
-message:send
-
-↓
-
-Socket Handler
-
-↓
-
-Message Service
-
-↓
-
-Message Repository
-
-↓
-
-MongoDB
-
-↓
-
-Broadcast
-
-message:received
-
----
-
-# Typing Indicator
-
-Client
-
-↓
-
-typing:start
-
-↓
-
-Server
-
-↓
-
-Broadcast
-
-typing:update
-
-↓
-
-Clients display typing indicator
-
----
-
-# Disconnect
-
-Socket disconnects
-
-↓
-
-Server removes socket
-
-↓
-
-If no sockets remain
-
-↓
-
-Presence becomes Offline
-
-↓
-
-Broadcast presence:update
+Typing and room subscriptions are client socket commands. Messages, reactions, receipts, calls, and notification mutations remain REST commands.

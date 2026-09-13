@@ -1,154 +1,58 @@
+# ADR-003: Unified Conversation Model
 
-## Status
-
-Accepted
-
----
+- **Status:** Accepted
 
 ## Context
 
-The application supports two forms of communication:
-
-- Channels
-- Direct Messages (DMs)
-
-An initial design considered separate entities for Channels and Chats.
-
-This introduced unnecessary duplication because both represent conversations that contain messages.
-
----
+Channels and one-to-one direct messages share activity, messages, read state, assets, search, notifications, and realtime behavior. Separate persistence models would duplicate these rules. Voice channels need different capabilities from text channels without becoming a separate tenant model.
 
 ## Decision
 
-InTouch will model all communication using a single `Conversation` entity.
+Use one `Conversation` collection with:
 
-A conversation may represent either:
+- `type: CHANNEL | DIRECT`.
+- For channels, immutable `kind: TEXT | VOICE`, category, position, and `PUBLIC | PRIVATE` visibility.
+- For direct messages, a stable organization-scoped participant pair.
+- `ConversationParticipant` for explicit private-channel and direct-message access.
 
-- CHANNEL
-- DM
+Text message endpoints reject voice-only conversations. Voice-channel DTOs expose occupancy/capacity rather than message summaries. DM calls attach immutable `CALL` messages to the same direct timeline.
 
-The conversation type is determined by the `type` field.
 
----
+## Decision Trade-offs
 
-## Conversation Types
+### Chosen: One discriminated Conversation model
 
-### CHANNEL
+**Pros**
 
-Represents a channel inside an organization.
+- Channels and direct messages share authorization, activity, unread, search, and lifecycle logic.
+- Text, voice, and call history can reuse consistent organization and participant relationships.
+- Adding channel capabilities does not require duplicating whole persistence pipelines.
 
-Examples:
+**Cons**
 
-- #general
-- #backend
-- #announcements
+- Some fields and operations are valid only for particular type/kind branches.
+- Services and schemas must reject invalid combinations such as message history on a voice-only channel.
+- Indexes can contain sparse or discriminator-specific fields.
 
-Channels may optionally belong to a Category.
+### Alternative: Separate Channel, DirectChat, and VoiceRoom collections
 
----
+**Pros**
 
-### DM
+- Each collection can expose a narrower schema.
+- Type-specific queries may appear simpler in isolation.
 
-Represents a private conversation between members of the same organization.
+**Cons**
 
-DMs do not belong to a Category.
-
-Users may only create DMs with other members of their current organization.
-
----
-
-## Architecture
-
-```text
-Organization
-        │
-        │
- Category (optional)
-        │
-        │
- Conversation
-    │         │
-CHANNEL      DM
-        │
-        │
-     Message
-```
-
----
-
-## Benefits
-
-Using a single Conversation entity:
-
-- Eliminates duplicated collections.
-- Simplifies querying.
-- Reduces application logic.
-- Provides a consistent model for messaging.
-- Makes future conversation types easy to introduce.
-
----
-
-## Query Examples
-
-Retrieve all conversations for an organization:
-
-```javascript
-Conversation.find({
-    organizationId: organizationId
-})
-```
-
-Retrieve all messages for a conversation:
-
-```javascript
-Message.find({
-    conversationId: conversationId
-})
-```
-
----
-
-## Alternatives Considered
-
-### Separate Channel and Chat Collections
-
-Pros
-
-- Clear distinction between concepts.
-
-Cons
-
-- Duplicate business logic.
-- Duplicate message handling.
-- Additional service layer complexity.
-- Harder to maintain.
-
----
-
-## Future Considerations
-
-Additional conversation types may be introduced without changing the overall architecture.
-
-Examples:
-
-- Announcement
-- Support Ticket
-- AI Conversation
-
-These can be represented by extending the `type` field rather than creating new collections.
-
----
+- Duplicates membership, participants, activity, deletion, search, and authorization rules.
+- Cross-conversation lists and shared message/call history require extra orchestration.
 
 ## Consequences
 
-### Advantages
+- Shared authorization and lifecycle services avoid duplicated channel/chat logic.
+- Queries remain organization-scoped and discriminated by type/kind.
+- Some fields apply only to a discriminator branch and must be enforced by schemas/services.
+- Channel kind cannot be changed after creation because it changes the supported domain behavior.
 
-- Simpler data model
-- Easier maintenance
-- Unified messaging pipeline
-- Better extensibility
+## Rejected Alternative
 
-### Trade-offs
-
-- Some fields are only relevant to specific conversation types.
-- Application logic must validate behavior based on the conversation type.
+Separate Channel, DirectChat, and VoiceRoom collections were rejected because they would duplicate participation, activity, deletion, and authorization logic.

@@ -1,48 +1,19 @@
 # Shared Contracts Architecture
 
-## Overview
+~~~mermaid
+flowchart TD
+  Zod[Domain Zod schemas] --> Types[Inferred TypeScript types]
+  Zod --> Runtime[Runtime parsing]
+  Zod --> Tests[Contract tests]
+  Zod -. coordinated .-> OpenAPI[OpenAPI 3.1]
+  Types --> API[Express API]
+  Types --> Web[Next.js web]
+  Types --> Mobile[Expo mobile]
+  Runtime --> API
+  Runtime --> Web
+  Runtime --> Mobile
+~~~
 
-InTouch uses a shared contracts approach to define all communication between clients and the backend.
+The shared package defines transport data, not business services or persistence models. The API owns authorization and domain behavior; clients gain compile-time guidance and runtime protection without importing server internals.
 
-A contract describes the structure of data exchanged across application boundaries.
-
-Examples include:
-
-- REST request DTOs
-- REST response DTOs
-- Socket.IO event payloads
-- Shared enums
-- Validation schemas
-
----
-
-# Goals
-
-- Single source of truth
-- Type safety
-- Runtime validation
-- Shared client/server models
-- Eliminate duplicated interfaces
-
----
-
-# Architecture
-
-                Zod Schema
-                     │
-        ┌────────────┴────────────┐
-        │                         │
- Runtime Validation      TypeScript Types
-        │                         │
-        └────────────┬────────────┘
-                     │
-        Backend & Frontend
-
----
-
-# Principles
-
-- Define once.
-- Reuse everywhere.
-- Never duplicate contracts.
-- Keep business logic independent of transport.
+Provider payloads are translated at adapters. LiveKit, Gemini, R2, Expo, Google, Brevo, MongoDB, and Redis structures do not become public DTOs accidentally.

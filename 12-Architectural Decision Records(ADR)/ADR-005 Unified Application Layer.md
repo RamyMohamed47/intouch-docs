@@ -1,179 +1,58 @@
+# ADR-005: Unified Application Service Layer
 
-## Status
-
-Accepted
-
----
+- **Status:** Accepted
 
 ## Context
 
-InTouch exposes multiple entry points into the system.
-
-These include:
-
-- REST API
-- Socket.IO
-- Future background workers
-- Future scheduled jobs
-- Future CLI scripts
-
-Each entry point may trigger the same business operations.
-
-Examples include:
-
-- Sending messages
-- Creating organizations
-- Inviting members
-- Updating profiles
-
-Duplicating business logic across controllers, socket handlers, and workers would increase maintenance costs and introduce inconsistencies.
-
----
+REST controllers, Socket.IO handlers, BullMQ workers, provider webhooks, reconcilers, and migrations may initiate or complete related domain operations. Duplicating rules across transports would make authorization and lifecycle behavior inconsistent.
 
 ## Decision
 
-Business logic will reside exclusively within the Application Service layer.
+Application services own business rules, policies, transaction orchestration, and provider-port coordination. Controllers and socket handlers remain transport adapters. Repositories own persistence queries. Workers and reconcilers invoke service-level operations or narrow idempotent use cases rather than writing domain state ad hoc.
 
-Controllers and Socket.IO handlers will act only as transport adapters.
+Realtime/provider delivery occurs only after transaction commit. Failures are logged and retried/reconciled without rolling back already-committed domain state.
 
-Their responsibilities are limited to:
 
-- Receiving requests or events
-- Validating input
-- Calling the appropriate service
-- Returning responses or emitting events
+## Decision Trade-offs
 
-Repositories are responsible only for data persistence.
+### Chosen: Service-owned business logic behind thin transports
 
-Business rules must never be implemented inside repositories.
+**Pros**
 
----
+- REST, Socket.IO, workers, webhooks, and reconcilers reuse the same domain rules.
+- Authorization, transactions, retries, and lifecycle transitions can be unit tested directly.
+- Repositories remain replaceable persistence boundaries rather than policy containers.
 
-## Architecture
+**Cons**
 
-```text
-                    Client
-                       │
-          ┌────────────┴────────────┐
-          │                         │
-      REST API               Socket.IO
-          │                         │
-          └────────────┬────────────┘
-                       │
-             Application Services
-                       │
-                Repositories
-                       │
-                  MongoDB
-```
+- Introduces interfaces, dependency wiring, mappers, and additional files.
+- Poorly scoped services can become large orchestration objects.
+- Developers must resist bypassing services from workers or handlers.
 
----
+### Alternative: Business logic in controllers or socket handlers
 
-## Responsibilities
+**Pros**
 
-### Controllers
+- Less ceremony for a very small prototype.
 
-- Parse HTTP requests
-- Validate input
-- Invoke services
-- Return HTTP responses
+**Cons**
 
-Controllers must not contain business logic.
+- Duplicates behavior across transports and makes rollback/concurrency testing difficult.
+- Couples domain rules to Express or Socket.IO APIs.
 
----
+### Alternative: Business logic in repositories
 
-### Socket Handlers
+**Pros**
 
-- Receive socket events
-- Validate payloads
-- Invoke services
-- Emit socket events
+- Persistence operations and rules appear colocated.
 
-Socket handlers must not contain business logic.
+**Cons**
 
----
-
-### Application Services
-
-Application Services contain the core business rules of the application.
-
-Examples include:
-
-- Authentication
-- Organization management
-- Membership management
-- Conversation management
-- Messaging
-
-Services orchestrate repositories and enforce business rules.
-
----
-
-### Repositories
-
-Repositories abstract data persistence.
-
-Responsibilities include:
-
-- Querying MongoDB
-- Saving documents
-- Updating documents
-- Deleting documents
-
-Repositories must remain free of business logic.
-
----
-
-## Benefits
-
-- Single source of truth for business logic.
-- Consistent behavior across REST and Socket.IO.
-- Easier testing.
-- Improved maintainability.
-- Easier integration of future transports.
-
----
-
-## Alternatives Considered
-
-### Business Logic in Controllers
-
-Pros
-
-- Simple for very small applications.
-
-Cons
-
-- Logic duplicated across transports.
-- Difficult to maintain.
-- Difficult to test.
-
----
-
-### Business Logic in Socket Handlers
-
-Pros
-
-- Direct event handling.
-
-Cons
-
-- Tight coupling.
-- Duplicate logic.
-- Poor separation of concerns.
-
----
+- Mixes policy with database mechanics and makes provider orchestration awkward.
+- Encourages transport-specific repositories and hidden authorization assumptions.
 
 ## Consequences
 
-### Advantages
-
-- Clear separation of responsibilities.
-- Reusable business logic.
-- Easier future expansion.
-- Cleaner architecture.
-
-### Trade-offs
-
-- Introduces an additional application layer.
-- Slightly more boilerplate than directly accessing models.
+- One behavior path is reusable from HTTP, realtime lifecycle, jobs, and scripts.
+- Services require explicit dependency interfaces and focused tests.
+- Additional layers create some boilerplate but make concurrency, rollback, and authorization testable.

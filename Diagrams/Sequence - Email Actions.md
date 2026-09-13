@@ -1,69 +1,23 @@
-```mermaid
+# Sequence - Email Verification and Reset
 
+~~~mermaid
 sequenceDiagram
+  actor User
+  participant Client
+  participant API
+  participant DB as MongoDB
+  participant Jobs as BullMQ/reconciler
+  participant Mail as Brevo or SMTP
+  User->>Client: Register or request reset
+  Client->>API: POST auth action
+  API->>DB: Transaction: hashed token and encrypted outbox
+  API-->>Client: Non-enumerating accepted response
+  Jobs->>DB: Lease committed outbox record
+  Jobs->>Mail: Send link
+  User->>Client: Open web/mobile link and submit token
+  Client->>API: Verify email or reset password
+  API->>DB: Consume token atomically
+  API-->>Client: 204 No Content
+~~~
 
-    actor User
-
-    participant Client
-
-    participant API
-
-    participant MongoDB
-
-    participant Worker
-
-    participant MailProvider as Mail provider (HTTPS or SMTP)
-
-  
-
-    User->>Client: Register password account
-
-    Client->>API: POST /auth/register
-
-    API->>MongoDB: Transaction: pending user + verification token + encrypted outbox job
-
-    API-->>Client: 201 verificationRequired=true
-
-    Worker->>MongoDB: Lease committed outbox job
-
-    Worker->>MailProvider: Send confirmation email
-
-    User->>Client: Open fragment-token link
-
-    Client->>API: POST /auth/verify-email
-
-    API->>MongoDB: Transaction: consume token + verify user + cancel pending job
-
-    API-->>Client: 204 confirmed
-
-  
-
-    User->>Client: Request password reset
-
-    Client->>API: POST /auth/forgot-password
-
-    API->>MongoDB: If eligible, replace reset token and encrypted outbox job
-
-    API-->>Client: 202 generic accepted response
-
-    Worker->>MailProvider: Send reset email after commit
-
-    User->>Client: Submit fragment token and new password
-
-    Client->>API: POST /auth/reset-password
-
-    API->>MongoDB: Transaction: consume token + replace hash + verify email + revoke sessions
-
-    API-->>Client: 204 reset complete
-
-```
-
-  
-
-Raw tokens are delivered only in URL fragments and request bodies. MongoDB
-
-stores only HMAC token hashes; outbox payloads are AES-256-GCM encrypted. Email
-
-verification links expire after 24 hours and password-reset links after 15
-
-minutes. Resend and forgot-password responses never reveal account existence.
+Raw action tokens are delivered only to the intended link/request body. MongoDB stores token hashes; encrypted outbox content is retried after commit.

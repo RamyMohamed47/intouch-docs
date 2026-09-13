@@ -1,405 +1,203 @@
 # Socket.IO Events
 
-  
-
 All handshake, acknowledgement, client-event, and server-event DTOs originate
-
 from Zod schemas exported by `@intouch/shared/realtime`. The API parses
-
 outbound payloads before emission, including conversion of `Date` values to ISO
-
 8601 strings. Web and mobile clients consume the inferred shared types
-
 rather than redefining event payloads.
-
-  
 
 ## Authentication
 
-  
-
 Connect with the current access JWT in the Socket.IO auth payload:
 
-  
-
 ```ts
-
 io(API_ORIGIN, { auth: { accessToken } });
-
 ```
 
-  
-
 Connections with a missing, invalid, or expired token are rejected. The server
-
 disconnects an established socket when that access token expires. Refresh the
-
 token through REST, reconnect, and join the required rooms again.
 
-  
-
 Connection middleware errors expose `{ code, message, retryAfterMs? }` through
-
 Socket.IO's `connect_error.data`. `UNAUTHORIZED` is the only connection error
-
 that should trigger an access-token refresh. `TOO_MANY_REQUESTS` should be
-
 retried after `retryAfterMs` without rotating the refresh token.
 
-  
-
 Each user may keep at most five active sockets. Connection attempts use a
-
 10-token bucket that refills one token every three seconds. Socket payloads are
-
 limited to 10 KB.
-
-  
 
 ## Client Events
 
-  
-
 ### `conversation:join`
-
-  
 
 Payload: `{ conversationId: string }`.
 
-  
-
 The server verifies channel or direct-message access before joining
-
 `conversation:<conversationId>`. The acknowledgement is `{ success: true }` or
-
 `{ success: false, error: { code, message } }`.
-
-  
 
 ### `conversation:leave`
 
-  
-
 Payload: `{ conversationId: string }`, with the same acknowledgement shape.
-
 Leaving also clears typing state for that socket.
-
-  
 
 ### `organization:subscribe` and `organization:unsubscribe`
 
-  
-
 Payload: `{ organizationId: string }`. Subscription verifies current membership
-
 before joining `organization:<organizationId>`. Presence is only delivered to
-
 subscribed sockets belonging to an organization the subject currently shares.
-
-  
 
 ### `typing:start` and `typing:stop`
 
-  
-
 Payload: `{ conversationId: string }`. The socket must already be in the
-
 authorized conversation room. Typing expires after five seconds, so active
-
 clients should refresh `typing:start` about every three seconds. Both events use
-
 the standard acknowledgement shape.
 
-  
-
 Every accepted `typing:start`, including a refresh heartbeat, emits
-
 `typing:updated` with `isTyping: true`. Consumers must handle repeated `true`
-
 events idempotently and refresh their local fallback expiry without repeatedly
-
 announcing unchanged state. A user who joins the room after typing begins sees
-
 the next heartbeat within approximately three seconds.
-
-  
 
 ### `voice:heartbeat`
 
-  
-
 Payload: `{ sessionId: string }`, where the ID is the caller's current voice
-
 session UUID. Connected clients refresh this lease every 30 seconds. The event
-
 uses the standard acknowledgement shape and is rate-limited before runtime
-
 state work. It carries no media or signaling data; LiveKit transports audio.
-
-  
 
 ## Authenticated Abuse Limits
 
-  
-
 - `conversation:join` and `organization:subscribe` share a 20-token bucket that
-
-  refills one token per second per user.
-
+  refills one token per second per user.
 - `typing:start` has a 10-token bucket that refills one token every two seconds
-
-  per user.
-
+  per user.
 - Limited events acknowledge `TOO_MANY_REQUESTS` before validation,
-
-  authorization, or broadcast work.
-
+  authorization, or broadcast work.
 - `conversation:leave`, `organization:unsubscribe`, and `typing:stop` are not
-
-  throttled so cleanup always remains available.
-
-  
+  throttled so cleanup always remains available.
 
 ## Server Events
 
-  
-
 - `message:created` carries the non-personalized message core DTO, including
-
-  safe attachment metadata when present.
-
+  safe attachment metadata when present.
 - `message:updated` carries the non-personalized updated message core DTO;
-
-  attachment metadata remains immutable while the caption may change.
-
+  attachment metadata remains immutable while the caption may change.
 - `message:deleted` carries the non-personalized redacted message tombstone and
-
-  an empty attachment list after private objects are queued for deletion.
-
+  an empty attachment list after private objects are queued for deletion.
 - `membership:joined` carries `{ organizationId, userId }` after an invitation acceptance or public join commits. Organization subscribers invalidate that organization's safe member roster; the event is an invalidation signal and does not duplicate user profile data.
-
 - `conversation:access-revoked` carries `{ conversationId }` before the socket is removed from that room.
-
 - `presence:updated` carries `{ userId, status, lastSeenAt }` to subscribed organization rooms. Online updates always use `lastSeenAt: null`; confirmed offline updates carry the persisted final-disconnect timestamp.
-
 - `typing:updated` carries `{ conversationId, userId, isTyping }` to other users in the conversation room.
-
 - `read-receipt:updated` carries the durable read-state DTO and is emitted only when a direct-message high-water mark advances. Events are idempotent; clients ignore stale, duplicate, and self updates and merge newer peer state into their server-state cache.
-
 - `conversation:activity` carries `{ organizationId, conversationId, conversationType, actorUserId, activityId, kind }` to authorized `user:<userId>` rooms. Kinds are `CONVERSATION_CREATED`, `MESSAGE_CREATED`, `MESSAGE_UPDATED`, and `MESSAGE_DELETED`. The payload intentionally contains no message content.
-
 - `channel-read-receipts:changed` carries only `{ conversationId }` to the active channel room when a channel high-water mark advances. It is an anonymous cache-invalidation signal and excludes every socket belonging to the reader.
-
 - `message-reactions:changed` carries `{ activityId, conversationId, messageId }` after a reaction transaction commits. It contains no reactor identity and is scoped to the authorized conversation room. Clients handle duplicate activity IDs idempotently and fetch `GET /api/v1/messages/:messageId/reactions` before merging authoritative personalized summaries.
-
 - `notification:changed` is delivered only to the affected `user:<userId>` room. It is a strict union of `UPSERTED` with a safe hydrated notification DTO, `DELETED` with a notification ID, and `READ_ALL`. Clients handle events idempotently, invalidate the notification query family, and use MongoDB-backed REST state to reconcile after reconnecting.
-
 - `call:incoming` carries `{ call }` only to the direct-message recipient's user room after the call transaction commits.
-
 - `call:updated` carries `{ call }` to both direct-message participants. Repeated or out-of-order lifecycle updates are idempotent; MongoDB remains authoritative.
-
 - `voice-channel:occupancy-updated` carries the authorized ten-person occupancy snapshot. Provider participant identities are opaque UUIDs mapped to safe organization user IDs only inside this authorized payload.
 
-  
-
 Messages are written through REST. Socket.IO only manages authorized room
-
 subscriptions and scoped server events; no event is broadcast globally.
-
 Attachment object keys, storage credentials, ETags, and presigned URLs are
-
 never emitted. Clients resolve each opaque attachment asset ID through the
-
 authorized REST access endpoint and refresh its short-lived URL when needed.
 
-  
-
 Organization search has no Socket.IO event. Atlas and native indexes are
-
 eventually consistent read models; the frontend issues debounced REST searches
-
 and opens exact message context through the message-context endpoint.
 
-  
-
 The member-list REST response is the initial presence snapshot. Web clients
-
 invalidate that exact organization roster after every successful
-
 `organization:subscribe`, including reconnects, and then apply
-
 `presence:updated` events incrementally.
 
-  
-
 Every authenticated socket also joins `user:<userId>`. That room is used for
-
 authorized inactive-conversation activity delivery and to exclude all sockets
-
 belonging to an acting or typing user, not only the socket that emitted an
-
 event. Public-channel activity targets current organization members. Private
-
 channel and direct-message activity additionally requires a current participant
-
 record.
 
-  
-
 Web clients keep a seven-second fallback expiry as a defensive guard against a
-
 missed server stop event. They clear typing immediately on `isTyping: false`,
-
 disconnect, authentication loss, conversation leave, access revocation, and
-
 provider unmount. Typing indicators use a polite atomic status announcement,
-
 reserve their layout space, and avoid reannouncing repeated heartbeats.
 
-  
-
 Presence and typing use replaceable stores. Local development defaults to
-
 in-memory state. Production uses Redis leases and the Socket.IO Redis adapter,
-
 so rooms, broadcasts, typing state, presence, authenticated abuse counters, and
-
 active-socket limits are shared across API replicas.
 
-  
-
 Sockets renew their presence and connection leases every 15 seconds. A normal
-
 final disconnect keeps the five-second offline grace period. If a replica dies
-
 without disconnect cleanup, the 45-second socket lease expires and the same
-
 grace period runs before the user is persisted and broadcast as offline. Typing
-
 heartbeats remain three seconds with a five-second expiry. Expired transitions
-
 are atomically claimed so only one replica emits the final update.
 
-  
-
 The browser uses WebSocket transport only. Redis unavailability makes the API
-
 unready and protected runtime operations fail closed; production never falls
-
 back to isolated memory state.
 
-  
-
 Direct-conversation REST responses include `peerReadReceipt`, so read status
-
 survives reloads and missed socket events. Clients reconcile direct-message
-
 queries after reconnecting. Clients also reconcile cached channel and direct
-
 conversation summaries after reconnecting or rotating an access token. Channel
-
 reader identities never appear in socket events; only the sender may request a
-
 bounded reader summary through REST.
 
-  
-
 Reaction mutations also remain REST-only. Socket.IO delivers anonymous
-
 post-commit invalidation rather than personalized reaction data, so every client
-
 reconciles against MongoDB and stale or unauthorized reactor identities cannot
-
 leak through room events. Reactions to another user's message create a durable,
-
 recipient-only notification, but they do not change conversation unread counts,
-
 last-message activity, typing state, or read receipts.
 
-  
-
 Notification mutations originate from REST-backed domain transactions rather
-
 than client socket events. Invitation notifications are created and removed with
-
 the invitation lifecycle, accepted-invitation notifications target the inviter,
-
 incoming DMs are grouped until the recipient advances their read state, and
-
 channel mentions, channel replies, and reactions target the relevant message
-
 recipient. Reply notification takes precedence when the same recipient is also
-
 mentioned. Category preferences and scoped mutes suppress foreground
-
 interruption and push, not these durable user-room events. Reconnects invalidate
-
 the notification query family so missed socket events never become the durable
-
 source of truth.
-
-  
 
 ## Voice Runtime
 
-  
-
 Socket.IO transports call lifecycle, occupancy invalidation, voice-session
-
 heartbeats, and targeted moderation requests only. LiveKit Cloud transports
-
 encrypted WebRTC audio, camera video, screen video/audio, and signaling. InTouch
-
 issues five-minute initial-connect credentials limited to microphone, camera,
-
 screen-share, and screen-share-audio publication and never
-
 places user IDs, names, or conversation IDs in provider room or participant
-
 identities. Signed LiveKit webhooks activate/release Redis leases; BullMQ
-
 provides ringing, connection, and disconnect deadlines when webhooks are late.
 
-  
-
 Every user has at most one reserved voice session across calls and voice
-
 channels. DM ringing reserves both participants, while voice channels enforce
-
 an atomic capacity of ten in the shared Redis store. Membership, private
-
 participant, channel, and organization lifecycle changes revoke provider
-
 participants and Redis leases after the MongoDB mutation commits. Call events
-
 include the durable initial `AUDIO | VIDEO` mode; live camera state remains in
-
 LiveKit and is never broadcast through Socket.IO or persisted by InTouch.
 
-  
-
 `screen-share:stop-requested` is a strict server-to-client event containing
-
 `{ sessionId, conversationId }`. It is sent only to the targeted participant
-
 after an owner successfully server-mutes that participant's current screen
-
 video and shared audio. The client then unpublishes its capture so the browser
-
 sharing indicator closes. Normal share publication and selection remain entirely
-
 inside LiveKit and do not create Socket.IO activity. Screen sharing is never
-
 persisted or silently resumed after reload or a full media reconnection.
 
-  
-
 Direct-call lifecycle state drives two self-hosted frontend tones. A recipient
-
 hears the incoming ringtone and the caller hears ringback only while the call is
-
 `RINGING`; every later or terminal state stops both. The tones are local UI
-
 audio, remain independent from LiveKit participant playback and browser-call
-
 notifications, and never travel through Socket.IO.

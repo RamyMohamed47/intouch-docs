@@ -1,181 +1,56 @@
 # Database Entities
 
-This document describes the primary entities of the InTouch database and their responsibilities.
-
----
-
-# User
-
-Represents a global account in the system.
-
-A user exists independently of any organization and may belong to multiple organizations through the Membership collection.
-
-## Responsibilities
-
-- Authentication
-- User profile
-- Global account information
-- OAuth accounts
-
----
-
-# Organization
-
-Represents a tenant (workspace).
-
-Organizations are the core of the multi-tenant architecture. Every resource except users belongs to exactly one organization.
-
-## Responsibilities
-
-- Workspace information
-- Members
-- Categories
-- Conversations
-- Organization settings
-
----
-
-# Membership
-
-Represents the relationship between a User and an Organization.
-
-This enables a many-to-many relationship between users and organizations.
-
-A membership also stores organization-specific information about a user.
-
-## Responsibilities
-
-- User role
-- Join date
-- Membership status
-- Future permissions
-
----
-
-# Category
-
-Used to organize conversations inside an organization.
-
-Categories are optional.
-
-A conversation may either belong to a category or exist directly under the organization.
-
-## Responsibilities
-
-- Organize conversations
-- Improve workspace navigation
-
-Example:
-
-Engineering
-- backend
-- frontend
-
-Social
-- memes
-- gaming
-
----
-
-# Conversation
-
-Represents any communication thread.
-
-A conversation may be either:
-
-- Channel
-- Direct Message (DM)
-
-Instead of maintaining separate collections for channels and DMs, both are represented using a single Conversation entity.
-
-## Conversation Types
-
-- CHANNEL
-- DM
-
-A conversation belongs to exactly one organization.
-
----
-
-# Message
-
-Represents an individual message inside a conversation.
-
-Messages belong to exactly one conversation.
-
-## Supported Types
-
-- Text
-- Image
-- File
-- Voice (future)
-- System
-
-Future features such as replies, reactions and edits will be implemented on top of this entity.
-
----
-
-# Attachment
-
-Represents a file attached to a message.
-
-Examples include:
-
-- Images
-- Videos
-- PDFs
-- Documents
-
-Files will initially be stored using Cloudinary.
-
----
-
-# Notification
-
-Represents a notification delivered to a user.
-
-Examples:
-
-- New message
-- Mention
-- Organization invite
-- Emoji reaction
-- System notification
-
-This entity is planned for a future release.
-
----
-
-# Entity Relationships
-
-```text
-User
-    │
-    ├────────────┐
-    │            │
-Membership       Notification
-    │
-Organization
-    │
-    ├───────────────┐
-    │               │
-Category       Conversation
-                    │
-                Message
-                    │
-              Attachment
-```
-
----
-
-# Future Entities (Not Yet Implemented)
-
-The following entities are being considered but are intentionally excluded from the MVP.
-
-- ConversationMember
-- Role
-- Permission
-- Friend
-- Invite
-- AuditLog
-- RefreshToken
+MongoDB is the durable source of truth. The canonical field-level model and indexes are in [[AI Context/database/ERD|ERD]].
+
+## Identity and Delivery
+
+| Entity | Responsibility |
+| --- | --- |
+| `User` | Public profile, password state, verification status, and external avatar fallback. |
+| `LoginProvider` | Verified Google identity linked by provider subject. |
+| `AuthSession` | Hashed rotating refresh session. |
+| `AuthActionToken` | Hashed single-use verification/reset token. |
+| `MailOutbox` | Encrypted transactional-email intent with leases and retry state. |
+
+## Organizations and Conversations
+
+| Entity | Responsibility |
+| --- | --- |
+| `Organization` | Tenant root, visibility, owner, and optional private logo asset. |
+| `Membership` | Unique user/organization relationship with `OWNER | MEMBER`. |
+| `Invitation` | Expiring invitation to a registered user. |
+| `Category` | Ordered organization channel grouping. |
+| `Conversation` | `CHANNEL | DIRECT`; channel kind is `TEXT | VOICE` and visibility is public/private. |
+| `ConversationParticipant` | Explicit private-channel and direct-message access. |
+
+## Messaging and Calls
+
+| Entity | Responsibility |
+| --- | --- |
+| `Message` | `TEXT | ATTACHMENT | CALL`, caption, reply target, mention metadata, edit/redaction timestamps. |
+| `MessageReaction` | One normalized emoji reaction per user/message. |
+| `ConversationReadState` | Per-user high-water read position. |
+| `CallSession` | Durable DM call mode, status, terminal reason, timestamps, and timeline-message link. |
+
+Reply previews and call summaries are hydrated views, not duplicated authoritative message records.
+
+## Preferences, Notifications, and Assets
+
+| Entity | Responsibility |
+| --- | --- |
+| `Notification` | Durable invitation, DM, reaction, mention, and reply activity. |
+| `NotificationPreference` | User category switches with all-enabled defaults. |
+| `NotificationMute` | Timed or indefinite organization/conversation mute. |
+| `PushDevice` | Encrypted Expo push token per installation. |
+| `PushOutbox` | Durable ordinary push-delivery intent. |
+| `CallAlertOutbox` | Short-lived incoming-call push intent. |
+| `ChatWallpaperPreference` | Default or conversation-specific preset and dimming. |
+| `StoredAsset` | Private R2 object ownership, purpose, lifecycle, signature, and claim state. |
+| `UploadDailyUsage` | Per-user daily upload quota accounting. |
+
+## Persistence Rules
+
+- Multi-document invariants use MongoDB transactions and therefore require a replica set or sharded cluster.
+- Soft/redacted message deletion preserves timeline ordering while removing content and attachment claims.
+- Provider room IDs, Redis leases, presigned URLs, credentials, and raw refresh/action tokens are not public DTO fields.
+- Existing records rely on safe defaults for later-added fields such as channel kind, mentions, replies, and notification preferences.

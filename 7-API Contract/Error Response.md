@@ -1,81 +1,28 @@
+# Error Responses
 
-## Error Format
+Every REST error has this strict shape:
 
-```json
+~~~json
 {
-    "success": false,
-    "error": {
-        "code": "",
-        "message": ""
-    }
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed"
+  }
 }
-```
+~~~
 
----
+Common codes include `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `TOO_MANY_REQUESTS`, `EMAIL_VERIFICATION_REQUIRED`, `INVALID_OR_EXPIRED_TOKEN`, `SEARCH_UNAVAILABLE`, `STORAGE_UNAVAILABLE`, `SERVICE_UNAVAILABLE`, voice conflict/unavailability codes, and Echo consent/provider codes.
 
-# HTTP Status Codes
+| Status | Meaning |
+| --- | --- |
+| 400 | Malformed body or strict contract validation failure. |
+| 401 | Missing, invalid, or expired authentication. |
+| 403 | Authenticated but not authorized or verification/consent required. |
+| 404 | Authorized resource lookup failed. |
+| 409 | State conflict, active/busy voice session, or capacity conflict. |
+| 429 | Rate or quota limit. Respect `Retry-After` when supplied. |
+| 500 | Sanitized unexpected failure. |
+| 503 | Critical dependency or provider unavailable. |
 
-## 200 OK
-
-Successful GET or PATCH request.
-
----
-
-## 201 Created
-
-Resource successfully created.
-
----
-
-## 204 No Content
-
-Successful DELETE request.
-
----
-
-## 400 Bad Request
-
-Validation failed.
-
----
-
-## 401 Unauthorized
-
-Missing or invalid authentication.
-
----
-
-## 403 Forbidden
-
-Authenticated but lacks permission.
-
----
-
-## 404 Not Found
-
-Requested resource does not exist.
-
----
-
-## 409 Conflict
-
-Resource conflict.
-
-Examples:
-
-- Duplicate email
-- Duplicate organization slug
-
----
-
-## 422 Unprocessable Entity (Optional)
-
-Semantically invalid input.
-
-May be replaced with HTTP 400 for simplicity.
-
----
-
-## 500 Internal Server Error
-
-Unexpected server error.
+Clients branch on `error.code`, not the human-readable message. Validation internals, provider responses, credentials, and stack traces are never returned.

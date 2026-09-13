@@ -1,85 +1,13 @@
-# Socket Event Contract
+# Event Contracts
 
-## Event Naming Convention
+All handshake, payload, acknowledgement, client-map, and server-map schemas live in `@intouch/shared/realtime`. TypeScript event maps are inferred from Zod rather than handwritten independently.
 
-Events follow a namespaced format.
+## Client Events (7)
 
-Examples:
+`conversation:join`, `conversation:leave`, `organization:subscribe`, `organization:unsubscribe`, `typing:start`, `typing:stop`, and `voice:heartbeat`.
 
-- auth:authenticate
-- conversation:join
-- conversation:leave
-- message:send
-- message:received
-- typing:start
-- typing:stop
-- presence:update
+## Server Events (16)
 
-This improves readability and scalability.
+`message:created`, `message:updated`, `message:deleted`, `membership:joined`, `conversation:access-revoked`, `presence:updated`, `typing:updated`, `read-receipt:updated`, `conversation:activity`, `channel-read-receipts:changed`, `message-reactions:changed`, `notification:changed`, `call:incoming`, `call:updated`, `screen-share:stop-requested`, and `voice-channel:occupancy-updated`.
 
----
-
-# Event Directions
-
-## Client → Server
-
-- auth:authenticate
-- conversation:join
-- conversation:leave
-- message:send
-- message:edit
-- message:delete
-- typing:start
-- typing:stop
-
----
-
-## Server → Client
-
-- message:received
-- message:edited
-- message:deleted
-- typing:update
-- presence:update
-- error
-
----
-
-# Acknowledgements
-
-Command events should return acknowledgements.
-
-Example
-
-Client
-
-message:send
-
-↓
-
-Server
-
-{
-    success: true,
-    messageId: "..."
-}
-
----
-
-# Event Philosophy
-
-Client emits intentions.
-
-Server emits facts.
-
-Example
-
-Client:
-
-message:send
-
-Server:
-
-message:received
-
-The client never broadcasts directly to other clients.
+The API parses outbound payloads before emission, which serializes dates and rejects accidental persistence/provider fields. See [[8-Socket.IO/Socket Events|Socket Events]] for exact payloads and delivery rules.

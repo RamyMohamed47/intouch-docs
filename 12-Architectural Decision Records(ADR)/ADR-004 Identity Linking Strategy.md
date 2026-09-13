@@ -1,323 +1,74 @@
-  
+# ADR-004: Verified Identity Linking
 
-## Status
-
-  
-
-Accepted
-
-  
-
----
-
-  
+- **Status:** Accepted
 
 ## Context
 
-  
-
-InTouch supports multiple authentication methods, including:
-
-  
-
-- Email & Password
-
-- Google OAuth
-
-  
-
-A user may authenticate using different methods over time while maintaining a single account.
-
-  
-
-The system must prevent duplicate accounts that share the same email address.
-
-  
-
----
-
-  
+One InTouch user may authenticate with password and Google. Provider email/profile data can change, while the provider subject is the stable identity key.
 
 ## Decision
 
-  
+- Store provider identities in `LoginProvider`, keyed by provider plus verified subject.
+- Link Google to an existing user only through a provider-verified email address.
+- Browser authentication uses the backend-owned authorization-code flow; native mobile supplies an ID token that the backend verifies for signature, issuer, expiry, audience, and verified email.
+- Discard Google access/refresh tokens after verification. InTouch continues to issue its own access and rotating refresh sessions.
+- Refresh the external Google avatar fallback on successful Google authentication unless the user has selected a private uploaded avatar; never proxy or permanently copy provider image bytes automatically.
 
-Email is globally unique across the system.
 
-  
+## Decision Trade-offs
 
-Only one user account may exist for a given email address.
+### Chosen: Verified provider subjects linked to one InTouch user
 
-  
+**Pros**
 
-Authentication methods are linked to the existing account instead of creating duplicate users.
+- Password and Google login converge on one authorization identity and session model.
+- The provider subject remains stable when profile data changes.
+- New providers can be represented without provider-specific top-level User fields.
 
-  
+**Cons**
 
-For the MVP, OAuth provider information will be stored directly on the `User` document.
+- Linking requires careful verified-email and provider-subject conflict handling.
+- Provider profile refresh rules must respect user-uploaded avatar precedence.
+- Embedded provider records need compound multikey indexes and atomic updates.
 
-  
+### Alternative: Trust client-supplied provider identity
 
-Provider credentials are embedded in the `loginProviders` array. Each provider
+**Pros**
 
-entry stores its provider type, provider account ID, link time, last-use time,
+- Very little backend integration code.
 
-and provider-specific credential data when required.
+**Cons**
 
-  
+- Allows identity spoofing and account takeover.
+- Cannot prove issuer, audience, expiry, or email verification.
 
-For Google, `providerAccountId` stores the stable Google `sub` claim. The pair
+### Alternative: Create a separate user for every login method
 
-of provider type and provider account ID is uniquely indexed across users.
+**Pros**
 
-  
+- Avoids account-linking conflict logic.
 
-Future OAuth providers (GitHub, Microsoft, etc.) may introduce additional provider fields or be migrated to a dedicated OAuthAccount collection if the authentication system grows in complexity.
+**Cons**
 
-  
+- One person receives fragmented memberships, conversations, and notifications.
+- Later account merging becomes risky and difficult.
 
----
+### Alternative: Store Google access and refresh tokens
 
-  
+**Pros**
 
-## Authentication Rules
+- Would enable future Google API calls without reauthorization.
 
-  
+**Cons**
 
-### Local Registration
-
-  
-
-If the email does not exist:
-
-  
-
-- Create a new user.
-
-- Store the password hash.
-
-  
-
-If the email already exists:
-
-  
-
-- Reject the registration.
-
-  
-
----
-
-  
-
-### Google Sign-In
-
-  
-
-If no user exists with the Google email:
-
-  
-
-- Create a new user.
-
-- Store the Google Provider ID.
-
-- Leave `passwordHash` empty.
-
-  
-
-If a user already exists with the same email:
-
-  
-
-- Link the Google Provider ID to the existing account.
-
-- Do not create a second user.
-
-  
-
----
-
-  
-
-### Local Login
-
-  
-
-Users authenticate using:
-
-  
-
-- Email
-
-- Password
-
-  
-
-Password verification is skipped for Google-only accounts.
-
-  
-
----
-
-  
-
-### Google Login
-
-  
-
-Users authenticate through Google OAuth.
-
-  
-
-After Google verifies the user's identity:
-
-  
-
-- Find the user by the Google `sub` provider ID first.
-
-- If the provider is not linked, find the user by verified email.
-
-- Link the provider if necessary.
-
-- Refresh the stored Google avatar fallback when Google supplies a picture.
-
-- Preserve the existing fallback when Google omits the picture claim.
-
-- Authenticate the existing account.
-
-  
-
-Uploaded R2 avatars remain authoritative in the UI. Google avatar
-
-synchronization updates only the external fallback used when no uploaded avatar
-
-is selected.
-
-  
-
----
-
-  
-
-## Edge Cases
-
-  
-
-### Existing Google Account → Local Password
-
-  
-
-A user who originally registered with Google may later choose to add a password.
-
-  
-
-This action requires ownership verification (for example, authenticating with Google before setting a password).
-
-  
-
----
-
-  
-
-### Existing Local Account → Google Login
-
-  
-
-If Google returns the same email address as an existing local account:
-
-  
-
-- Link the Google Provider ID.
-
-- Reuse the existing account.
-
-- Preserve all organizations, memberships, conversations, and data.
-
-  
-
----
-
-  
-
-### Duplicate Emails
-
-  
-
-Duplicate accounts with the same email are never permitted.
-
-  
-
-The email address is treated as the unique identity of a user.
-
-  
-
----
-
-  
-
-## Alternatives Considered
-
-  
-
-### Separate OAuthAccount Collection
-
-  
-
-Pros
-
-  
-
-- Supports unlimited authentication providers.
-
-- Cleaner normalization.
-
-- Easier provider management.
-
-  
-
-Cons
-
-  
-
-- Additional collection.
-
-- More joins (or multiple queries).
-
-- Unnecessary complexity for the MVP.
-
-  
-
-This option may be revisited in a future version of InTouch.
-
-  
-
----
-
-  
+- Adds credential storage, rotation, revocation, and breach exposure with no current product need.
+- Couples InTouch sessions to Google token lifecycle.
 
 ## Consequences
 
-  
+- Email alone is never trusted from a client payload.
+- Provider subject changes cannot silently take over another user.
+- Password and Google login converge on the same InTouch user/session/authorization model.
+- Additional providers can be added without adding provider-specific fields to `User`.
 
-### Advantages
-
-  
-
-- Prevents duplicate accounts.
-
-- Simplifies authentication.
-
-- Keeps user data centralized.
-
-- Easy to extend in the future.
-
-  
-
-### Trade-offs
-
-  
-
-- The User document contains provider-specific fields.
-
-- A dedicated OAuthAccount collection may eventually provide a cleaner design if many providers are supported.
+Storing provider tokens, trusting client-supplied Google user IDs, and maintaining separate users per login method were rejected.

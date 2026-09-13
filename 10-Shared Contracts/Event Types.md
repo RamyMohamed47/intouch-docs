@@ -1,53 +1,15 @@
 # Socket Event Types
 
-## Client → Server
+## Client Intentions
 
-Client events represent intentions.
+The seven client events request room subscription, typing state, or a voice lease heartbeat. Each command validates a strict payload and returns the shared acknowledgement union.
 
-Examples
+## Server Facts
 
-- message:send
-- typing:start
-- conversation:join
+The sixteen server events announce committed message/call state, scoped activity, presence/typing, access revocation, receipts/reactions, durable notification changes, screen-share moderation, or voice occupancy.
 
----
+Messages are not sent through a `message:send` event. The client creates them through REST and receives `message:created` after commit.
 
-## Server → Client
+## Source of Truth
 
-Server events represent facts.
-
-Examples
-
-- message:received
-- typing:update
-- presence:update
-
----
-
-## Payload Definition
-
-Every event payload originates from a Zod schema.
-
-Example
-
-MessageSendSchema
-
-↓
-
-MessageSendPayload
-
-↓
-
-Socket Event
-
----
-
-## Acknowledgements
-
-Command events should return typed acknowledgements.
-
-Example
-
-AckSuccess
-
-AckFailure
+`packages/shared/realtime` exports handshake schemas, acknowledgements, and typed client/server event maps. [[8-Socket.IO/Socket Events|Socket Events]] documents delivery and privacy rules.

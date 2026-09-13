@@ -1,38 +1,12 @@
+# Validation Strategy
 
-## Overview
+Validation occurs at trust boundaries:
 
-Validation occurs before business logic executes.
+- Environment variables at process startup.
+- REST params, query strings, bodies, and public responses.
+- Socket.IO handshake, commands, acknowledgements, and emitted facts.
+- LiveKit webhook raw-body signature plus decoded event shape.
+- Provider responses before conversion into domain-safe values.
+- Persisted records when mapped to public DTOs.
 
-Invalid data never reaches the service layer.
-
----
-
-## Validation Library
-
-Zod
-
----
-
-## Validation Responsibilities
-
-Validate
-
-- HTTP requests
-- Socket payloads
-- Query parameters
-- Path parameters
-- Environment variables
-
----
-
-## Service Layer
-
-Services assume validated input.
-
-Services do not repeat validation already performed by the transport layer.
-
----
-
-## Principle
-
-Validate at the boundary.
+Services receive normalized inputs but still enforce business invariants and authorization; schema validity is not authorization. Repositories enforce persistence constraints and indexes. Tests cover accepted normalization, unknown-key rejection, malformed data, field stripping, and date serialization.
