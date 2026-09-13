@@ -30,6 +30,8 @@ tags:
   - name: Uploads
   - name: Notifications
   - name: Search
+  - name: AI
+  - name: Voice
 
 security:
   - bearerAuth: []
@@ -82,6 +84,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/mobile/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate a native mobile client
+      description: Returns both tokens in JSON. This native flow does not set cookies or require browser CSRF protection.
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/LoginRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MobileAuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/mobile/google:
+    post:
+      tags: [Authentication]
+      summary: Authenticate a native mobile client with Google
+      description: Verifies a Google ID token against the configured server client audience and returns rotating InTouch credentials.
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/MobileGoogleRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MobileAuthResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /auth/mobile/refresh:
+    post:
+      tags: [Authentication]
+      summary: Rotate a native mobile refresh token
+      description: Accepts the refresh credential in a strict JSON body and returns a replacement pair without setting cookies.
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/MobileRefreshRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MobileRefreshResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/mobile/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke a native mobile refresh session
+      description: Idempotently revokes the refresh credential and, when supplied, removes the current app installation's push registration.
+      security: []
+      requestBody:
+        $ref: "#/components/requestBodies/MobileLogoutRequest"
+      responses:
+        "204":
+          description: Session revoked or already absent
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
@@ -357,6 +435,130 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
+  /users/me/push-devices/{installationId}:
+    put:
+      tags: [Users, Notifications]
+      summary: Register or rotate this mobile installation's Expo push token
+      parameters:
+        - $ref: "#/components/parameters/PushInstallationId"
+      requestBody:
+        $ref: "#/components/requestBodies/RegisterPushDeviceRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/PushDeviceResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    delete:
+      tags: [Users, Notifications]
+      summary: Remove this mobile installation's push registration
+      parameters:
+        - $ref: "#/components/parameters/PushInstallationId"
+      responses:
+        "204":
+          description: Push registration removed or already absent
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /users/me/notification-preferences:
+    get:
+      tags: [Users, Notifications]
+      summary: Get the caller's notification categories and active mutes
+      responses:
+        "200":
+          $ref: "#/components/responses/NotificationPreferencesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      tags: [Users, Notifications]
+      summary: Replace the caller's notification category preferences
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateNotificationPreferencesRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/NotificationPreferencesResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /users/me/notification-mutes/organizations/{organizationId}:
+    put:
+      tags: [Users, Notifications]
+      summary: Mute notification interruption from one workspace
+      description: A null expiry mutes indefinitely. Organization invitations are never suppressed by a workspace mute.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        $ref: "#/components/requestBodies/NotificationMuteRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/NotificationPreferencesResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    delete:
+      tags: [Users, Notifications]
+      summary: Remove the caller's workspace notification mute
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/NotificationPreferencesResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /users/me/notification-mutes/conversations/{conversationId}:
+    put:
+      tags: [Users, Notifications]
+      summary: Mute notification interruption from one conversation
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        $ref: "#/components/requestBodies/NotificationMuteRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/NotificationPreferencesResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    delete:
+      tags: [Users, Notifications]
+      summary: Remove the caller's conversation notification mute
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/NotificationPreferencesResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /users/me/chat-wallpaper:
     get:
       tags: [Users]
@@ -684,6 +886,123 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  #
+  # AI assistant
+  #
+
+  /organizations/{organizationId}/ai/settings:
+    get:
+      tags: [AI]
+      summary: Get organization AI settings and caller consent
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/AiSettingsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    put:
+      tags: [AI]
+      summary: Enable or disable organization AI
+      description: Owner-only. Enabling AI also records the owner's consent for the current disclosure version.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiOrganizationSettingsUpdate"
+      responses:
+        "200":
+          $ref: "#/components/responses/AiSettingsResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/ai/consent:
+    put:
+      tags: [AI]
+      summary: Accept the current AI data-use disclosure
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiConsentUpdate"
+      responses:
+        "200":
+          $ref: "#/components/responses/AiSettingsResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [AI]
+      summary: Revoke the caller's AI consent
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/AiSettingsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/ai/responses:
+    post:
+      tags: [AI]
+      summary: Stream an authorized AI response
+      description: |
+        Streams strict server-sent events named `started`, `sources`, `delta`,
+        `completed`, or `error`. Organization questions retrieve only public
+        text channels the caller can access; conversation questions and
+        summaries enforce current conversation access. Prompt and response
+        text are not persisted by this endpoint.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiResponseRequest"
+      responses:
+        "200":
+          description: AI response event stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   #
   # Search
@@ -1042,6 +1361,250 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
+  /conversations/{conversationId}/voice/join:
+    post:
+      tags: [Voice]
+      summary: Join an authorized voice channel
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        $ref: "#/components/requestBodies/JoinVoiceSessionRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/VoiceJoinResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /conversations/{conversationId}/voice/participants/{userId}/mute:
+    post:
+      tags: [Voice]
+      summary: Server-mute a voice-channel participant
+      description: Owner-only. Remote unmute is intentionally unsupported.
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Participant microphone muted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /conversations/{conversationId}/voice/participants/{userId}/screen-share:
+    delete:
+      tags: [Voice]
+      summary: Stop a voice-channel participant's current screen share
+      description: Owner-only. The participant remains connected and may share again later.
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Current screen video and shared audio stopped, or no share was active
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /conversations/{conversationId}/voice/participants/{userId}:
+    delete:
+      tags: [Voice]
+      summary: Disconnect a voice-channel participant
+      description: Owner-only.
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Participant disconnected
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /conversations/{conversationId}/calls:
+    post:
+      tags: [Voice]
+      summary: Start a direct-message audio or video call
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        $ref: "#/components/requestBodies/StartCallRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/CallJoinResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /voice/sessions/me:
+    get:
+      tags: [Voice]
+      summary: Get the caller's active voice session
+      responses:
+        "200":
+          $ref: "#/components/responses/ActiveVoiceSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Voice]
+      summary: Leave the caller's active voice session
+      responses:
+        "204":
+          description: Session released or already absent
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /voice/sessions/me/resume:
+    post:
+      tags: [Voice]
+      summary: Resume the caller's authorized active voice session
+      responses:
+        "200":
+          $ref: "#/components/responses/VoiceJoinResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /calls/{callId}:
+    get:
+      tags: [Voice]
+      summary: Get an authorized direct-message call
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CallResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /calls/{callId}/accept:
+    post:
+      tags: [Voice]
+      summary: Accept an incoming call and receive media credentials
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CallJoinResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /calls/{callId}/decline:
+    post:
+      tags: [Voice]
+      summary: Decline an incoming ringing call
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CallResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /calls/{callId}/cancel:
+    post:
+      tags: [Voice]
+      summary: Cancel an outgoing ringing call
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CallResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /calls/{callId}/end:
+    post:
+      tags: [Voice]
+      summary: End an accepted or active call
+      parameters:
+        - $ref: "#/components/parameters/CallId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CallResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /integrations/livekit/webhook:
+    post:
+      tags: [Voice]
+      summary: Receive signed LiveKit lifecycle events
+      description: Provider-only endpoint. The signature is verified against the raw request body and duplicate events are ignored.
+      security: []
+      responses:
+        "204":
+          description: Event accepted or already processed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   #
   # Messages
   #
@@ -1388,6 +1951,14 @@ components:
         type: string
         pattern: "^[a-fA-F0-9]{24}$"
 
+    CallId:
+      name: callId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-fA-F0-9]{24}$"
+
     CategoryId:
       name: categoryId
       in: path
@@ -1443,6 +2014,14 @@ components:
         type: string
         pattern: "^[a-fA-F0-9]{24}$"
 
+    PushInstallationId:
+      name: installationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
   requestBodies:
 
     RegisterRequest:
@@ -1460,6 +2039,38 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/LoginInput"
+
+    MobileGoogleRequest:
+      description: Native Google ID token issued for the configured server client audience.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MobileGoogleInput"
+
+    MobileRefreshRequest:
+      description: Native refresh credential transported in JSON rather than a browser cookie.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MobileRefreshInput"
+
+    MobileLogoutRequest:
+      description: Native refresh credential plus optional current installation identity.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MobileLogoutInput"
+
+    RegisterPushDeviceRequest:
+      description: Expo token registration for one authenticated app installation.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RegisterPushDeviceInput"
 
     VerifyEmailRequest:
       description: Defined by the shared email-confirmation contract.
@@ -1580,6 +2191,21 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/UpdateMessageInput"
+    UpdateNotificationPreferencesRequest:
+      description: Replace all four notification category switches.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UpdateNotificationPreferencesInput"
+
+    NotificationMuteRequest:
+      description: Mute until the supplied future instant, or indefinitely when null.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/NotificationMuteInput"
 
     CreateUploadRequest:
       description: Strict avatar or message-attachment upload intent.
@@ -1604,6 +2230,22 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/SetMessageReactionInput"
+
+    JoinVoiceSessionRequest:
+      description: Optionally replace the caller's existing voice session.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/JoinVoiceSessionInput"
+
+    StartCallRequest:
+      description: Start an audio or video call, optionally replacing the caller's active media session.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/StartCallInput"
 
   responses:
 
@@ -1642,6 +2284,20 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/AccessTokenPayload"
+
+    MobileAuthResponse:
+      description: Native mobile session created without cookies.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MobileAuthPayload"
+
+    MobileRefreshResponse:
+      description: Native mobile session rotated without cookies.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MobileRefreshPayload"
 
     GoogleOAuthStartRedirect:
       description: OAuth state cookie set and browser redirected to Google.
@@ -1755,6 +2411,34 @@ components:
                 items:
                   $ref: "#/components/schemas/PublicOrganization"
 
+    VoiceJoinResponse:
+      description: Voice session reserved and short-lived LiveKit credentials issued.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/VoiceJoinPayload"
+
+    ActiveVoiceSessionResponse:
+      description: Caller voice-session lease, or null when inactive.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ActiveVoiceSessionPayload"
+
+    CallResponse:
+      description: Direct-message call returned successfully.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CallPayload"
+
+    CallJoinResponse:
+      description: Call state and short-lived LiveKit credentials.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CallJoinPayload"
+
     MembershipResponse:
       description: Membership returned successfully.
       content:
@@ -1819,6 +2503,18 @@ components:
                 type: integer
                 minimum: 0
 
+    PushDeviceResponse:
+      description: Safe push-device metadata. Provider tokens are never returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [pushDevice]
+            properties:
+              pushDevice:
+                $ref: "#/components/schemas/PushDevice"
+
     CategoryResponse:
       description: Category returned successfully.
       content:
@@ -1865,6 +2561,18 @@ components:
             properties:
               wallpaper:
                 $ref: "#/components/schemas/ChatWallpaper"
+
+    NotificationPreferencesResponse:
+      description: The caller's notification categories and currently active mutes.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [preferences]
+            properties:
+              preferences:
+                $ref: "#/components/schemas/NotificationPreferences"
 
     ConversationListResponse:
       description: Accessible conversation list.
@@ -1997,6 +2705,18 @@ components:
           schema:
             $ref: "#/components/schemas/OrganizationSearchResponse"
 
+    AiSettingsResponse:
+      description: Organization AI availability, consent, disclosure, and quota state.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [aiSettings]
+            properties:
+              aiSettings:
+                $ref: "#/components/schemas/AiSettings"
+
     MessageReactionStateResponse:
       description: Authoritative personalized reaction state for one message.
       content:
@@ -2101,6 +2821,162 @@ components:
 
   schemas:
 
+    AiOrganizationSettingsUpdate:
+      type: object
+      additionalProperties: false
+      required: [enabled, disclosureVersion]
+      properties:
+        enabled:
+          type: boolean
+        disclosureVersion:
+          type: string
+          minLength: 1
+          maxLength: 50
+        acceptsProviderDataUse:
+          type: boolean
+          const: true
+
+    AiConsentUpdate:
+      type: object
+      additionalProperties: false
+      required: [disclosureVersion, acceptsProviderDataUse]
+      properties:
+        disclosureVersion:
+          type: string
+          minLength: 1
+          maxLength: 50
+        acceptsProviderDataUse:
+          type: boolean
+          const: true
+
+    AiSettings:
+      type: object
+      additionalProperties: false
+      required: [available, organizationEnabled, userConsentAccepted, canManage, disclosureVersion, provider, serviceTier, dataUseNotice, quota]
+      properties:
+        available:
+          type: boolean
+        organizationEnabled:
+          type: boolean
+        userConsentAccepted:
+          type: boolean
+        canManage:
+          type: boolean
+        disclosureVersion:
+          type: string
+        provider:
+          type: string
+          const: GEMINI
+        serviceTier:
+          type: string
+          enum: [FREE, PAID]
+        dataUseNotice:
+          type: string
+        quota:
+          type: object
+          additionalProperties: false
+          required: [userRemaining, organizationRemaining, resetsAt]
+          properties:
+            userRemaining:
+              type: integer
+              minimum: 0
+            organizationRemaining:
+              type: integer
+              minimum: 0
+            resetsAt:
+              type: string
+              format: date-time
+
+    AiResponseRequest:
+      oneOf:
+        - $ref: "#/components/schemas/AiAskRequest"
+        - $ref: "#/components/schemas/AiSummarizeRequest"
+        - $ref: "#/components/schemas/AiComposeRequest"
+      discriminator:
+        propertyName: task
+
+    AiAskRequest:
+      type: object
+      additionalProperties: false
+      required: [task, prompt, scope]
+      properties:
+        task:
+          type: string
+          const: ASK
+        prompt:
+          type: string
+          minLength: 2
+          maxLength: 1000
+        scope:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [kind, conversationId]
+              properties:
+                kind:
+                  type: string
+                  const: CONVERSATION
+                conversationId:
+                  type: string
+                  pattern: "^[a-fA-F0-9]{24}$"
+            - type: object
+              additionalProperties: false
+              required: [kind]
+              properties:
+                kind:
+                  type: string
+                  const: ORGANIZATION
+        history:
+          type: array
+          maxItems: 6
+          items:
+            type: object
+            additionalProperties: false
+            required: [role, content]
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                type: string
+                minLength: 1
+                maxLength: 2000
+
+    AiSummarizeRequest:
+      type: object
+      additionalProperties: false
+      required: [task, conversationId, mode]
+      properties:
+        task:
+          type: string
+          const: SUMMARIZE
+        conversationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        mode:
+          type: string
+          enum: [SUMMARY, ACTION_ITEMS]
+
+    AiComposeRequest:
+      type: object
+      additionalProperties: false
+      required: [task, action, text]
+      properties:
+        task:
+          type: string
+          const: COMPOSE
+        action:
+          type: string
+          enum: [REWRITE_PROFESSIONAL, SHORTEN, FIX_GRAMMAR, TRANSLATE]
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        targetLanguage:
+          type: string
+          minLength: 2
+          maxLength: 40
+
     UpdateChatWallpaperInput:
       type: object
       additionalProperties: false
@@ -2203,6 +3079,10 @@ components:
           minLength: 1
           maxLength: 100
           pattern: ".*\\S.*"
+        kind:
+          type: string
+          enum: [TEXT, VOICE]
+          default: TEXT
         visibility:
           type: string
           enum: [PUBLIC, PRIVATE]
@@ -2254,9 +3134,16 @@ components:
         propertyName: type
 
     ChannelConversation:
+      oneOf:
+        - $ref: "#/components/schemas/TextChannelConversation"
+        - $ref: "#/components/schemas/VoiceChannelConversation"
+      discriminator:
+        propertyName: kind
+
+    ChannelConversationBase:
       type: object
       required:
-        [id, organizationId, categoryId, name, type, visibility, position, createdAt, updatedAt]
+        [id, organizationId, categoryId, name, type, kind, visibility, position, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2269,6 +3156,9 @@ components:
         type:
           type: string
           const: CHANNEL
+        kind:
+          type: string
+          enum: [TEXT, VOICE]
         visibility:
           type: string
           enum: [PUBLIC, PRIVATE]
@@ -2281,17 +3171,39 @@ components:
         updatedAt:
           type: string
           format: date-time
-        lastMessage:
-          oneOf:
-            - $ref: "#/components/schemas/MessageCore"
-            - type: "null"
-        unreadCount:
-          type: integer
-          minimum: 0
-        readReceipt:
-          oneOf:
-            - $ref: "#/components/schemas/ReadReceipt"
-            - type: "null"
+
+    TextChannelConversation:
+      allOf:
+        - $ref: "#/components/schemas/ChannelConversationBase"
+        - type: object
+          required: [kind, lastMessage, unreadCount, readReceipt]
+          properties:
+            kind:
+              type: string
+              const: TEXT
+            lastMessage:
+              oneOf:
+                - $ref: "#/components/schemas/MessageCore"
+                - type: "null"
+            unreadCount:
+              type: integer
+              minimum: 0
+            readReceipt:
+              oneOf:
+                - $ref: "#/components/schemas/ReadReceipt"
+                - type: "null"
+
+    VoiceChannelConversation:
+      allOf:
+        - $ref: "#/components/schemas/ChannelConversationBase"
+        - type: object
+          required: [kind, occupancy]
+          properties:
+            kind:
+              type: string
+              const: VOICE
+            occupancy:
+              $ref: "#/components/schemas/VoiceOccupancy"
 
     DirectConversation:
       type: object
@@ -2567,6 +3479,14 @@ components:
           items:
             type: string
             pattern: "^[a-fA-F0-9]{24}$"
+        replyToMessageId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        mentions:
+          type: array
+          maxItems: 25
+          items:
+            $ref: "#/components/schemas/MessageMention"
 
     UpdateMessageInput:
       type: object
@@ -2580,6 +3500,265 @@ components:
               maxLength: 4000
               pattern: ".*\\S.*"
             - type: "null"
+        mentions:
+          type: array
+          maxItems: 25
+          items:
+            $ref: "#/components/schemas/MessageMention"
+
+    MessageMention:
+      type: object
+      additionalProperties: false
+      required: [userId, start, end]
+      properties:
+        userId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        start:
+          type: integer
+          minimum: 0
+          description: Inclusive UTF-16 offset into message content.
+        end:
+          type: integer
+          minimum: 1
+          description: Exclusive UTF-16 offset into message content.
+
+    JoinVoiceSessionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        replaceActiveSession:
+          type: boolean
+          default: false
+
+    StartCallInput:
+      type: object
+      additionalProperties: false
+      properties:
+        replaceActiveSession:
+          type: boolean
+          default: false
+        mediaMode:
+          type: string
+          enum: [AUDIO, VIDEO]
+          default: AUDIO
+
+    VoiceCredentials:
+      type: object
+      additionalProperties: false
+      required: [serverUrl, token, expiresAt]
+      properties:
+        serverUrl:
+          type: string
+          format: uri
+          pattern: "^wss://"
+        token:
+          type: string
+          writeOnly: true
+        expiresAt:
+          type: string
+          format: date-time
+
+    VoiceSession:
+      type: object
+      additionalProperties: false
+      required:
+        [id, kind, organizationId, conversationId, callId, userId, connectedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [VOICE_CHANNEL, CALL]
+        organizationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        conversationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        callId:
+          oneOf:
+            - type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+            - type: "null"
+        userId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        connectedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+
+    VoiceOccupancyParticipant:
+      type: object
+      additionalProperties: false
+      required: [userId, participantIdentity]
+      properties:
+        userId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        participantIdentity:
+          type: string
+          format: uuid
+
+    VoiceOccupancy:
+      type: object
+      additionalProperties: false
+      required: [conversationId, capacity, participantUserIds, participants]
+      properties:
+        conversationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        capacity:
+          type: integer
+          const: 10
+        participantUserIds:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            pattern: "^[a-fA-F0-9]{24}$"
+        participants:
+          type: array
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/VoiceOccupancyParticipant"
+
+    CallSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [id, callerUserId, recipientUserId, mediaMode, status, endReason, startedAt, answeredAt, endedAt, durationSeconds]
+      properties:
+        id:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        callerUserId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        recipientUserId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        mediaMode:
+          type: string
+          enum: [AUDIO, VIDEO]
+        status:
+          type: string
+          enum: [RINGING, CONNECTING, ACTIVE, ENDED]
+        endReason:
+          oneOf:
+            - type: string
+              enum: [DECLINED, CANCELLED, MISSED, COMPLETED, FAILED, ACCESS_REVOKED]
+            - type: "null"
+        startedAt:
+          type: string
+          format: date-time
+        answeredAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        endedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        durationSeconds:
+          oneOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+
+    Call:
+      type: object
+      additionalProperties: false
+      required:
+        [id, organizationId, conversationId, callerUserId, recipientUserId, mediaMode, status, endReason, startedAt, answeredAt, endedAt, durationSeconds]
+      properties:
+        id:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        organizationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        conversationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        callerUserId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        recipientUserId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        mediaMode:
+          type: string
+          enum: [AUDIO, VIDEO]
+        status:
+          type: string
+          enum: [RINGING, CONNECTING, ACTIVE, ENDED]
+        endReason:
+          oneOf:
+            - type: string
+              enum: [DECLINED, CANCELLED, MISSED, COMPLETED, FAILED, ACCESS_REVOKED]
+            - type: "null"
+        startedAt:
+          type: string
+          format: date-time
+        answeredAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        endedAt:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        durationSeconds:
+          oneOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+
+    VoiceJoinPayload:
+      type: object
+      additionalProperties: false
+      required: [session, credentials]
+      properties:
+        session:
+          $ref: "#/components/schemas/VoiceSession"
+        credentials:
+          $ref: "#/components/schemas/VoiceCredentials"
+
+    ActiveVoiceSessionPayload:
+      type: object
+      additionalProperties: false
+      required: [session]
+      properties:
+        session:
+          oneOf:
+            - $ref: "#/components/schemas/VoiceSession"
+            - type: "null"
+
+    CallPayload:
+      type: object
+      additionalProperties: false
+      required: [call]
+      properties:
+        call:
+          $ref: "#/components/schemas/Call"
+
+    CallJoinPayload:
+      type: object
+      additionalProperties: false
+      required: [call, credentials]
+      properties:
+        call:
+          $ref: "#/components/schemas/Call"
+        credentials:
+          $ref: "#/components/schemas/VoiceCredentials"
 
     Attachment:
       type: object
@@ -2661,7 +3840,7 @@ components:
     MessageCore:
       type: object
       required:
-        [id, conversationId, senderId, content, messageType, editedAt, deletedAt, createdAt, updatedAt, attachments]
+        [id, conversationId, senderId, content, messageType, editedAt, deletedAt, createdAt, updatedAt, attachments, mentions, replyTo]
       properties:
         id:
           type: string
@@ -2675,7 +3854,7 @@ components:
             - type: "null"
         messageType:
           type: string
-          enum: [TEXT, ATTACHMENT]
+          enum: [TEXT, ATTACHMENT, CALL]
         editedAt:
           oneOf:
             - type: string
@@ -2697,6 +3876,39 @@ components:
           maxItems: 5
           items:
             $ref: "#/components/schemas/Attachment"
+        mentions:
+          type: array
+          maxItems: 25
+          items:
+            $ref: "#/components/schemas/MessageMention"
+        replyTo:
+          oneOf:
+            - $ref: "#/components/schemas/MessageReplyPreview"
+            - type: "null"
+        call:
+          oneOf:
+            - $ref: "#/components/schemas/CallSummary"
+            - type: "null"
+
+    MessageReplyPreview:
+      type: object
+      additionalProperties: false
+      required: [id, sender, content, messageType, deletedAt]
+      properties:
+        id:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        sender:
+          $ref: "#/components/schemas/PublicUserSummary"
+        content:
+          type: [string, "null"]
+          maxLength: 160
+        messageType:
+          type: string
+          enum: [TEXT, ATTACHMENT, CALL]
+        deletedAt:
+          type: [string, "null"]
+          format: date-time
 
     MessageReactionSummary:
       type: object
@@ -3045,6 +4257,8 @@ components:
         - $ref: "#/components/schemas/InvitationAcceptedNotification"
         - $ref: "#/components/schemas/DirectMessageNotification"
         - $ref: "#/components/schemas/MessageReactionNotification"
+        - $ref: "#/components/schemas/ChannelMentionNotification"
+        - $ref: "#/components/schemas/MessageReplyNotification"
       discriminator:
         propertyName: type
 
@@ -3105,6 +4319,98 @@ components:
               type: string
             emoji:
               type: string
+
+    ChannelMentionNotification:
+      allOf:
+        - $ref: "#/components/schemas/NotificationBase"
+        - type: object
+          required: [type, conversationId, messageId]
+          properties:
+            type:
+              type: string
+              const: CHANNEL_MENTION_RECEIVED
+            conversationId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+            messageId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+
+    MessageReplyNotification:
+      allOf:
+        - $ref: "#/components/schemas/NotificationBase"
+        - type: object
+          required: [type, conversationId, messageId]
+          properties:
+            type:
+              type: string
+              const: MESSAGE_REPLY_RECEIVED
+            conversationId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+            messageId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+
+    NotificationCategoryPreferences:
+      type: object
+      additionalProperties: false
+      required: [invitations, directMessages, mentionsAndReplies, reactions, calls]
+      properties:
+        invitations:
+          type: boolean
+        directMessages:
+          type: boolean
+        mentionsAndReplies:
+          type: boolean
+        reactions:
+          type: boolean
+        calls:
+          type: boolean
+
+    UpdateNotificationPreferencesInput:
+      type: object
+      additionalProperties: false
+      required: [categories]
+      properties:
+        categories:
+          $ref: "#/components/schemas/NotificationCategoryPreferences"
+
+    NotificationMuteInput:
+      type: object
+      additionalProperties: false
+      required: [mutedUntil]
+      properties:
+        mutedUntil:
+          type: [string, "null"]
+          format: date-time
+
+    NotificationMute:
+      type: object
+      additionalProperties: false
+      required: [organizationId, conversationId, mutedUntil]
+      properties:
+        organizationId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        conversationId:
+          type: [string, "null"]
+          pattern: "^[a-fA-F0-9]{24}$"
+        mutedUntil:
+          type: [string, "null"]
+          format: date-time
+
+    NotificationPreferences:
+      type: object
+      additionalProperties: false
+      required: [categories, mutes]
+      properties:
+        categories:
+          $ref: "#/components/schemas/NotificationCategoryPreferences"
+        mutes:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationMute"
 
     CreateOrganizationInput:
       type: object
@@ -3187,8 +4493,11 @@ components:
         password:
           type: string
           minLength: 8
-          maxLength: 72
+          maxLength: 128
           writeOnly: true
+          description: Limited to 72 UTF-8 bytes after validation.
+        deliveryTarget:
+          $ref: "#/components/schemas/AuthDeliveryTarget"
 
     LoginInput:
       type: object
@@ -3203,6 +4512,78 @@ components:
           minLength: 8
           maxLength: 72
           writeOnly: true
+
+    AuthDeliveryTarget:
+      type: string
+      enum: [WEB, MOBILE]
+      default: WEB
+      description: Selects the primary link target while email retains a web fallback.
+
+    MobileGoogleInput:
+      type: object
+      additionalProperties: false
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+          maxLength: 16384
+          writeOnly: true
+
+    MobileRefreshInput:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          writeOnly: true
+
+    MobileLogoutInput:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          writeOnly: true
+        installationId:
+          type: string
+          format: uuid
+
+    RegisterPushDeviceInput:
+      type: object
+      additionalProperties: false
+      required: [expoPushToken, platform]
+      properties:
+        expoPushToken:
+          type: string
+          pattern: "^(ExponentPushToken|ExpoPushToken)\\[[A-Za-z0-9_-]+\\]$"
+          writeOnly: true
+        platform:
+          type: string
+          enum: [ANDROID, IOS]
+
+    PushDevice:
+      type: object
+      additionalProperties: false
+      required: [installationId, platform, enabled, updatedAt]
+      properties:
+        installationId:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum: [ANDROID, IOS]
+        enabled:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
 
     AuthActionToken:
       type: string
@@ -3227,6 +4608,8 @@ components:
         email:
           type: string
           format: email
+        deliveryTarget:
+          $ref: "#/components/schemas/AuthDeliveryTarget"
 
     ResetPasswordInput:
       type: object
@@ -3298,6 +4681,30 @@ components:
         accessToken:
           type: string
 
+    MobileAuthPayload:
+      type: object
+      additionalProperties: false
+      required: [user, accessToken, refreshToken]
+      properties:
+        user:
+          $ref: "#/components/schemas/PublicUser"
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+          writeOnly: true
+
+    MobileRefreshPayload:
+      type: object
+      additionalProperties: false
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+          writeOnly: true
+
     RegistrationPendingPayload:
       type: object
       additionalProperties: false
@@ -3353,6 +4760,10 @@ components:
                 - STORAGE_UNAVAILABLE
                 - EMAIL_VERIFICATION_REQUIRED
                 - INVALID_OR_EXPIRED_TOKEN
+                - VOICE_SESSION_ACTIVE
+                - VOICE_USER_BUSY
+                - VOICE_CAPACITY_REACHED
+                - VOICE_UNAVAILABLE
                 - INTERNAL_SERVER_ERROR
             message:
               type: string

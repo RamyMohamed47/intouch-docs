@@ -4,9 +4,11 @@
 
 InTouch uses BullMQ when `BACKGROUND_JOBS_PROVIDER=bullmq` and the original
 
-leased MongoDB pollers when `BACKGROUND_JOBS_PROVIDER=polling`. Production uses
+leased MongoDB pollers when `BACKGROUND_JOBS_PROVIDER=polling`. Production and
 
-BullMQ; polling is the local-memory default and emergency rollback path.
+the standard Docker-backed local workflow use BullMQ. Polling remains the
+
+local-memory fallback and emergency rollback path.
 
   
 
@@ -18,11 +20,21 @@ BullMQ; polling is the local-memory default and emergency rollback path.
 
 - MongoDB `StoredAsset` records own durable R2 lifecycle and cleanup state.
 
+- MongoDB `PushOutbox` records own durable mobile notification delivery and
+
+  Expo receipt state.
+
+- MongoDB `CallAlertOutbox` records own short-lived direct-call interruption
+
+  and stale-ringing cancellation state.
+
 - BullMQ owns dispatch, retry timing, shared concurrency, and short-lived job
 
   history only.
 
-- In-app notifications remain transactional MongoDB writes and are not queued.
+- In-app notifications remain transactional MongoDB writes. Their opaque IDs
+
+  are reconciled into the push outbox after commit.
 
   
 
@@ -53,6 +65,32 @@ All keys are under `${REDIS_KEY_PREFIX}:bullmq`.
   concurrency 5, and performs three BullMQ retries with exponential delay before
 
   returning the asset to MongoDB's bounded cleanup backoff.
+
+- `voice-lifecycle`: processes ringing, accepted-media, and disconnect-grace
+
+  timeouts and runs a repeatable reconciliation job every 30 seconds. Every
+
+  transition is idempotent so duplicate, delayed, or out-of-order jobs are safe.
+
+- `push-delivery`: reconciles every two seconds, sends safe activity-only copy
+
+  through Expo Push Service, and checks provider receipts after 15 minutes.
+
+  Tokens are encrypted in MongoDB and never enter BullMQ payloads. Category
+
+  preferences and active workspace/conversation mutes are checked immediately
+
+  before dispatch; suppressed jobs complete successfully without calling Expo.
+
+- `call-alert-delivery`: reconciles every second with concurrency 5, delivers a
+
+  high-priority incoming-call interruption during the 30-second ringing window,
+
+  and follows it with a data-only stale-ringing cancellation signal. The calls
+
+  preference and active workspace/conversation mutes are evaluated immediately
+
+  before dispatch. Four bounded attempts use 1, 3, and 7 second retry delays.
 
   
 
@@ -87,3 +125,17 @@ throughput bounded as replicas scale. Redis must use `noeviction`. There is no
 public queue endpoint or Bull Board deployment; structured logs are the current
 
 operational interface.
+
+  
+
+For local development, `npm run infra:up` starts Redis with the required policy
+
+and Mailpit for SMTP capture. Set `MAIL_PROVIDER=smtp`, `SMTP_HOST=localhost`,
+
+`SMTP_PORT=1025`, and disable TLS. Inspect captured jobs at
+
+`http://localhost:8025`. See
+
+`.agents/infrastructure/Local Docker Infrastructure.md` for the complete local
+
+configuration.

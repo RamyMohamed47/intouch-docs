@@ -50,7 +50,17 @@
 
 - Next.js frontend at `apps/web`
 
-- Future mobile application reserved for `apps/mobile`
+- Expo Router mobile application at `apps/mobile`, Android-first and iOS-ready
+
+- Local application processes run natively; `compose.infrastructure.yml`
+
+  provides the MongoDB replica set, Redis/BullMQ, and Mailpit development stack.
+
+- Observability uses structured Railway logs, OpenTelemetry OTLP metrics and
+
+  sampled traces, and sanitized Sentry error reporting. Local Grafana LGTM is
+
+  optional and disposable; telemetry never controls application readiness.
 
   
 
@@ -120,6 +130,50 @@
 
   access tokens and rotating refresh sessions.
 
+- Native mobile authentication returns access and refresh tokens through strict
+
+  JSON endpoints. Access tokens remain in memory and rotating refresh tokens
+
+  are stored in Expo SecureStore; browser cookie and CSRF behavior is unchanged.
+
+  
+
+## Mobile
+
+  
+
+- Expo SDK 57 and React Native 0.86 share `@intouch/shared` contracts with the
+
+  API and web application.
+
+- Mobile includes native authentication, workspace administration, text
+
+  channels and DMs, attachments, reactions, typing, presence, receipts,
+
+  themes, and chat wallpapers.
+
+- TanStack Query owns API state. Socket.IO updates or reconciles those caches
+
+  and disconnects while the app is backgrounded.
+
+- V1.2 adds Echo streaming and composer tools, organization-wide search,
+
+  message replies and mentions, notification categories and scoped mutes,
+
+  authoritative badges, and sanitized mobile Sentry reporting.
+
+- Mobile V2.0 adds LiveKit voice channels, direct audio/video calls, Android
+
+  screen-share publishing, cross-platform screen-share viewing, call tones,
+
+  foreground media controls, and high-priority Expo call notifications.
+
+- Active audio sessions keep Socket.IO and the Android foreground service alive
+
+  while backgrounded. Cameras stop on background and do not resume without a
+
+  user action. Persistent offline data and queued sends remain out of scope.
+
   
 
 ## Multi-tenancy
@@ -138,7 +192,9 @@ Single Database + organizationId
 
 - Supported activity is invitation received, invitation accepted, incoming
 
-  direct message, and reaction to the recipient's message.
+  direct message, channel mention, channel reply, and reaction to the
+
+  recipient's message.
 
 - Notification writes and lifecycle cleanup share the source domain
 
@@ -146,9 +202,23 @@ Single Database + organizationId
 
 - Unread DMs group per conversation until the recipient's read state advances.
 
-- Notification records expire after 30 days. Email and push preferences remain
+- Notification records expire after 30 days. Mobile push tokens are encrypted
 
-  out of scope.
+  at rest, scoped to installation IDs, delivered through a durable BullMQ-backed
+
+  outbox, and removed when Expo reports `DeviceNotRegistered`.
+
+- Category preferences and timed/permanent workspace or conversation mutes
+
+  suppress push and foreground interruption only. Durable records, unread chat
+
+  state, and Socket.IO reconciliation remain authoritative.
+
+- Direct-call alerts are intentionally not durable inbox records. A short-lived
+
+  MongoDB outbox and BullMQ queue deliver ringing state and a data-only stale
+
+  alert cancellation after checking the calls preference and active mutes.
 
   
 
@@ -179,6 +249,88 @@ Single Database + organizationId
 - Public DTOs and Socket.IO events expose opaque asset IDs and safe metadata,
 
   never bucket keys, credentials, ETags, or presigned URLs.
+
+  
+
+## Voice Communication
+
+  
+
+- LiveKit Cloud carries audio, camera video, screen video/audio, and WebRTC
+
+  signaling. InTouch remains authoritative for membership, call lifecycle,
+
+  occupancy, history, and moderation.
+
+- Voice channels are persistent `VOICE` conversations with a capacity of ten;
+
+  existing channels are migrated to `TEXT`.
+
+- Direct-message calls create immutable `CALL` timeline messages and use
+
+  BullMQ for ringing, connection, disconnect-grace, and reconciliation jobs.
+
+- Direct calls persist their initial `AUDIO | VIDEO` mode. Cameras are
+
+  participant-controlled ephemeral tracks and remain optional in voice channels.
+
+- Screen shares are participant-controlled ephemeral LiveKit tracks available in
+
+  calls and voice channels. Multiple participants may present, compatible
+
+  browser audio is optional, and owners can stop a current voice-channel share.
+
+- Direct-call ringing uses original bundled InTouch audio: recipients hear the
+
+  incoming chime and callers hear a quieter ringback. These UI tones are
+
+  independent from LiveKit participant audio and never play in voice channels.
+
+- Redis enforces one active voice session per user across API replicas and
+
+  stores only opaque participant identities and ephemeral leases.
+
+- Socket.IO carries call lifecycle, occupancy, and targeted moderation requests
+
+  only. It never carries media, provider credentials, or WebRTC signaling.
+
+- Mobile consumes the same credentials and lifecycle APIs as web. Android can
+
+  publish screen video without device audio; iOS is receive-only for screen
+
+  sharing in this release. Native CallKit and Android Telecom integration are
+
+  deferred.
+
+  
+
+## Echo AI Assistant
+
+  
+
+- Echo uses Gemini through a provider interface. The API owns provider
+
+  credentials, authorization, retrieval, redaction, quotas, and SSE streaming.
+
+- Organization owners explicitly enable AI for a disclosure version; each
+
+  member separately accepts or revokes consent.
+
+- Conversation requests reuse normal access checks. Organization-wide retrieval
+
+  searches only accessible public text channels and never broadens permissions.
+
+- Composer transformations send only the caller's draft. Generated text is
+
+  previewed and never sent automatically.
+
+- Prompts, generated responses, and workspace excerpts are not persisted or
+
+  logged. MongoDB stores only enablement and consent records.
+
+- Redis coordinates bounded daily and concurrent usage across replicas. BullMQ
+
+  is intentionally not involved in interactive AI generation.
 
   
 

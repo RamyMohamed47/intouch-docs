@@ -51,14 +51,14 @@ Infrastructure improvements
 		 ├── Typing
 		  ├── Socket.IO adapter
 		   └── Distributed rate limiting (optional)
-- [ ] BullMQ
+- [x] BullMQ
 		└── Async email/notification jobs
-- [ ] Docker
+- [x] Docker
 		├── MongoDB
 		 └── Redis
 		  └── API/worker containers
 - [x] Logging
-- [ ] Monitoring
+- [x] Monitoring
 		├── Health checks
 		 ├── Metrics
 		   └── Error monitoring
@@ -71,8 +71,10 @@ Infrastructure improvements
 
 Advanced Features
 
-- [ ] Voice Channels
-- [ ] Video Calls
-- [ ] AI Assistant
-- [ ] Mobile App
+- [x] Voice Channels
+- [x] Video Calls
+- [x] Screen Share
+- [x] Ringtones
+- [x] AI Assistant
+- [x] Mobile App
 - [ ] Load testing

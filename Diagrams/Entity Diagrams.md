@@ -216,6 +216,10 @@ erDiagram
 
         enum type
 
+        enum kind
+
+        string voiceRoomId
+
         enum visibility
 
         int position
@@ -266,6 +270,14 @@ erDiagram
 
         enum messageType
 
+        ObjectId callId
+
+        ObjectId replyToMessageId
+
+        json mentions
+
+        ObjectId notifiedMentionUserIds
+
         datetime createdAt
 
         datetime updatedAt
@@ -289,6 +301,44 @@ erDiagram
         ObjectId userId
 
         string emoji
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
+    CallSession {
+
+        ObjectId id
+
+        ObjectId organizationId
+
+        ObjectId conversationId
+
+        ObjectId callerUserId
+
+        ObjectId recipientUserId
+
+        enum mediaMode
+
+        string providerRoomId
+
+        ObjectId timelineMessageId
+
+        enum status
+
+        enum endReason
+
+        datetime startedAt
+
+        datetime acceptedAt
+
+        datetime answeredAt
+
+        datetime endedAt
 
         datetime createdAt
 
@@ -436,9 +486,141 @@ erDiagram
 
         datetime readAt
 
+        int pushVersion
+
+        int pushEnqueuedVersion
+
         datetime lastActivityAt
 
         datetime expiresAt
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
+    NotificationPreference {
+
+        ObjectId id
+
+        ObjectId userId
+
+        json categories
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
+    NotificationMute {
+
+        ObjectId id
+
+        ObjectId userId
+
+        ObjectId organizationId
+
+        ObjectId conversationId
+
+        datetime mutedUntil
+
+        datetime createdAt
+
+        datetime updatedAt
+
+    }
+
+  
+
+    PushDevice {
+
+        ObjectId id
+
+        ObjectId userId
+
+        string installationId
+
+        enum platform
+
+        string tokenHash
+
+        string ciphertext
+
+        string iv
+
+        string authTag
+
+        boolean enabled
+
+        datetime lastRegisteredAt
+
+        datetime invalidatedAt
+
+        datetime purgeAt
+
+    }
+
+  
+
+    PushOutbox {
+
+        ObjectId id
+
+        ObjectId notificationId
+
+        ObjectId recipientUserId
+
+        int pushVersion
+
+        enum status
+
+        int attempts
+
+        int receiptAttempts
+
+        datetime availableAt
+
+        datetime receiptAvailableAt
+
+        datetime expiresAt
+
+        datetime purgeAt
+
+    }
+
+  
+
+    CallAlertOutbox {
+
+        ObjectId id
+
+        string callId
+
+        ObjectId recipientUserId
+
+        enum kind
+
+        enum status
+
+        int attempts
+
+        datetime availableAt
+
+        datetime expiresAt
+
+        datetime dispatchedAt
+
+        datetime leaseUntil
+
+        string lastError
+
+        datetime purgeAt
 
         datetime createdAt
 
@@ -522,6 +704,22 @@ erDiagram
 
   
 
+    User ||--o| NotificationPreference : configures
+
+  
+
+    User ||--o{ NotificationMute : mutes
+
+  
+
+    Organization ||--o{ NotificationMute : scopes
+
+  
+
+    Conversation ||--o{ NotificationMute : optionally_scopes
+
+  
+
     User ||--o{ StoredAsset : owns
 
   
@@ -543,6 +741,22 @@ erDiagram
   
 
     Message ||--o{ StoredAsset : attaches
+
+  
+
+    Organization ||--o{ CallSession : scopes
+
+  
+
+    Conversation ||--o{ CallSession : contains
+
+  
+
+    Message ||--o| CallSession : records
+
+  
+
+    User ||--o{ CallSession : participates
 
   
 
@@ -571,6 +785,26 @@ erDiagram
   
 
     Message ||--o{ Notification : references
+
+  
+
+    User ||--o{ PushDevice : registers
+
+  
+
+    User ||--o{ PushOutbox : receives
+
+  
+
+    Notification ||--o{ PushOutbox : delivers
+
+  
+
+    CallSession ||--o{ CallAlertOutbox : interrupts
+
+  
+
+    User ||--o{ CallAlertOutbox : receives
 
 ```
 
@@ -812,11 +1046,25 @@ valid lifecycle or authorized owner.
 
   
 
+`Message.replyToMessageId` is immutable and constrained by the service to the
+
+same conversation. Mention records embed the selected user and validated UTF-16
+
+range. Reply previews are bulk hydrated from message and public-user records;
+
+they are not duplicated into the stored message. `notifiedMentionUserIds`
+
+prevents repeated edits and retries from notifying the same recipient twice.
+
+  
+
 `Notification` stores durable, recipient-specific in-app activity for pending
 
-organization invitations, accepted invitations, incoming direct messages, and
+organization invitations, accepted invitations, incoming direct messages,
 
-reactions to the recipient's messages. Invitation and reaction notifications
+channel mentions, channel replies, and reactions to the recipient's messages.
+
+Invitation, mention, reply, and reaction notifications
 
 use deterministic deduplication keys. Consecutive unread direct messages from
 
@@ -840,6 +1088,58 @@ after commit and carries safe hydrated DTOs to the recipient's user room.
 
   
 
+`NotificationPreference` is unique per user and stores the five category
+
+switches. Its absence resolves to all categories enabled. `NotificationMute`
+
+is unique per user and organization/conversation scope; an absent `mutedUntil`
+
+means indefinite and a TTL index removes expired timed mutes. Preferences and
+
+mutes are evaluated immediately before push dispatch, so delayed BullMQ jobs
+
+honor current settings without deleting durable notification records.
+
+  
+
+`PushDevice` stores one encrypted Expo token per app installation. The token
+
+hash enforces global uniqueness without making the provider token queryable,
+
+and invalid registrations receive a delayed TTL cleanup timestamp.
+
+`PushOutbox` stores only notification/user references, a notification version,
+
+provider ticket IDs, bounded retry state, and receipt timing. BullMQ carries
+
+opaque outbox IDs; MongoDB reconciliation recovers enqueue gaps after crashes.
+
+The final mobile logout request may include its installation ID so session and
+
+push registration are removed together from the user's perspective.
+
+  
+
+`CallAlertOutbox` stores short-lived direct-call interruption work separately
+
+from the durable notification inbox. The incoming alert is unique per call and
+
+recipient, expires with the 30-second ringing window, and is delivered only
+
+while the call remains `RINGING`. The first terminal or connecting state update
+
+enqueues a data-only cancellation signal so mobile clients can dismiss stale
+
+ringing UI. Delivery checks the calls category and current organization or
+
+conversation mutes immediately before contacting Expo. Repository leases,
+
+bounded retries, reconciliation, and TTL cleanup make MongoDB authoritative;
+
+BullMQ carries only the opaque outbox ID.
+
+  
+
 Search does not introduce a persistence entity. Native development search uses
 
 text indexes on `Message.content`, `Conversation.name`, and the weighted
@@ -855,3 +1155,45 @@ are filtered to current organization memberships and never expose email or
 provider data. Search cursors are opaque and bound to the provider, normalized
 
 query, result type, and optional conversation filter.
+
+  
+
+Channel conversations have immutable `kind = TEXT | VOICE`. Existing channels
+
+are backfilled to `TEXT`; voice channels own an opaque provider room ID and do
+
+not have message history, unread state, or read receipts. `CallSession` stores
+
+the durable direct-message call lifecycle and links exactly one immutable
+
+`Message.messageType = CALL` timeline entry. Provider room IDs are selected out
+
+of normal queries and never enter public DTOs. `CallSession.mediaMode` records
+
+whether the call began as `AUDIO` or `VIDEO`; current camera state is ephemeral.
+
+Live occupancy, participant
+
+identities, connection leases, and webhook deduplication remain expiring Redis
+
+state rather than MongoDB entities.
+
+  
+
+`AiOrganizationSettings` stores one optional AI-enablement record per
+
+organization, including the active disclosure version, enabling owner, and
+
+enablement timestamp. `AiUserConsent` is unique by `(organizationId, userId)`
+
+and records acceptance of that same disclosure version. Disabling organization
+
+AI removes member consent records so re-enablement requires fresh consent.
+
+Organization deletion removes both records transactionally. Prompt text,
+
+retrieved excerpts, model output, provider request IDs, and token contents are
+
+never stored. Daily request counters and short concurrency leases are runtime
+
+state in Redis rather than durable MongoDB entities.

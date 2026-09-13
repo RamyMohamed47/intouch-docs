@@ -8,7 +8,7 @@ from Zod schemas exported by `@intouch/shared/realtime`. The API parses
 
 outbound payloads before emission, including conversion of `Date` values to ISO
 
-8601 strings. Web and future mobile clients consume the inferred shared types
+8601 strings. Web and mobile clients consume the inferred shared types
 
 rather than redefining event payloads.
 
@@ -124,6 +124,20 @@ the next heartbeat within approximately three seconds.
 
   
 
+### `voice:heartbeat`
+
+  
+
+Payload: `{ sessionId: string }`, where the ID is the caller's current voice
+
+session UUID. Connected clients refresh this lease every 30 seconds. The event
+
+uses the standard acknowledgement shape and is rate-limited before runtime
+
+state work. It carries no media or signaling data; LiveKit transports audio.
+
+  
+
 ## Authenticated Abuse Limits
 
   
@@ -179,6 +193,12 @@ the next heartbeat within approximately three seconds.
 - `message-reactions:changed` carries `{ activityId, conversationId, messageId }` after a reaction transaction commits. It contains no reactor identity and is scoped to the authorized conversation room. Clients handle duplicate activity IDs idempotently and fetch `GET /api/v1/messages/:messageId/reactions` before merging authoritative personalized summaries.
 
 - `notification:changed` is delivered only to the affected `user:<userId>` room. It is a strict union of `UPSERTED` with a safe hydrated notification DTO, `DELETED` with a notification ID, and `READ_ALL`. Clients handle events idempotently, invalidate the notification query family, and use MongoDB-backed REST state to reconcile after reconnecting.
+
+- `call:incoming` carries `{ call }` only to the direct-message recipient's user room after the call transaction commits.
+
+- `call:updated` carries `{ call }` to both direct-message participants. Repeated or out-of-order lifecycle updates are idempotent; MongoDB remains authoritative.
+
+- `voice-channel:occupancy-updated` carries the authorized ten-person occupancy snapshot. Provider participant identities are opaque UUIDs mapped to safe organization user IDs only inside this authorized payload.
 
   
 
@@ -306,10 +326,80 @@ the invitation lifecycle, accepted-invitation notifications target the inviter,
 
 incoming DMs are grouped until the recipient advances their read state, and
 
-reaction notifications target the message sender. Selected incoming DMs and
+channel mentions, channel replies, and reactions target the relevant message
 
-invitation events may produce frontend toasts; reaction notifications remain
+recipient. Reply notification takes precedence when the same recipient is also
 
-silent. Reconnects invalidate the notification query family so missed socket
+mentioned. Category preferences and scoped mutes suppress foreground
 
-events never become the durable source of truth.
+interruption and push, not these durable user-room events. Reconnects invalidate
+
+the notification query family so missed socket events never become the durable
+
+source of truth.
+
+  
+
+## Voice Runtime
+
+  
+
+Socket.IO transports call lifecycle, occupancy invalidation, voice-session
+
+heartbeats, and targeted moderation requests only. LiveKit Cloud transports
+
+encrypted WebRTC audio, camera video, screen video/audio, and signaling. InTouch
+
+issues five-minute initial-connect credentials limited to microphone, camera,
+
+screen-share, and screen-share-audio publication and never
+
+places user IDs, names, or conversation IDs in provider room or participant
+
+identities. Signed LiveKit webhooks activate/release Redis leases; BullMQ
+
+provides ringing, connection, and disconnect deadlines when webhooks are late.
+
+  
+
+Every user has at most one reserved voice session across calls and voice
+
+channels. DM ringing reserves both participants, while voice channels enforce
+
+an atomic capacity of ten in the shared Redis store. Membership, private
+
+participant, channel, and organization lifecycle changes revoke provider
+
+participants and Redis leases after the MongoDB mutation commits. Call events
+
+include the durable initial `AUDIO | VIDEO` mode; live camera state remains in
+
+LiveKit and is never broadcast through Socket.IO or persisted by InTouch.
+
+  
+
+`screen-share:stop-requested` is a strict server-to-client event containing
+
+`{ sessionId, conversationId }`. It is sent only to the targeted participant
+
+after an owner successfully server-mutes that participant's current screen
+
+video and shared audio. The client then unpublishes its capture so the browser
+
+sharing indicator closes. Normal share publication and selection remain entirely
+
+inside LiveKit and do not create Socket.IO activity. Screen sharing is never
+
+persisted or silently resumed after reload or a full media reconnection.
+
+  
+
+Direct-call lifecycle state drives two self-hosted frontend tones. A recipient
+
+hears the incoming ringtone and the caller hears ringback only while the call is
+
+`RINGING`; every later or terminal state stops both. The tones are local UI
+
+audio, remain independent from LiveKit participant playback and browser-call
+
+notifications, and never travel through Socket.IO.
