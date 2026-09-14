@@ -12,4 +12,4 @@ Messages are not sent through a `message:send` event. The client creates them th
 
 ## Source of Truth
 
-`packages/shared/realtime` exports handshake schemas, acknowledgements, and typed client/server event maps. [[8-Socket.IO/Socket Events|Socket Events]] documents delivery and privacy rules.
+`packages/shared/realtime` exports handshake schemas, acknowledgements, and typed client/server event maps. [[08-Socket.IO/Socket Events|Socket Events]] documents delivery and privacy rules.

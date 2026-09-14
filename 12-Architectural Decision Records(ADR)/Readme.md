@@ -1,5 +1,37 @@
 # Architecture Decision Records
 
+ADR identifiers remain stable and record when a decision was documented. The
+thematic views below improve discovery without renumbering historical records.
+
+## Browse by Area
+
+### Repository Foundations
+
+- [[12-Architectural Decision Records(ADR)/ADR-013 Monorepo Repository Strategy|ADR-013 Monorepo Repository Strategy]]
+- [[12-Architectural Decision Records(ADR)/ADR-006 TypeScript Adoption|ADR-006 TypeScript Adoption]]
+
+### Architecture and Data
+
+- [[12-Architectural Decision Records(ADR)/ADR-001 Multi-Tenancy Strategy|ADR-001 Multi-Tenancy Strategy]]
+- [[12-Architectural Decision Records(ADR)/ADR-002 MongoDB|ADR-002 MongoDB]]
+- [[12-Architectural Decision Records(ADR)/ADR-003 Conversation Model|ADR-003 Conversation Model]]
+- [[12-Architectural Decision Records(ADR)/ADR-005 Unified Application Layer|ADR-005 Unified Application Layer]]
+
+### Identity and Sessions
+
+- [[12-Architectural Decision Records(ADR)/ADR-004 Identity Linking Strategy|ADR-004 Identity Linking Strategy]]
+- [[12-Architectural Decision Records(ADR)/ADR-007 Authentication Session Strategy|ADR-007 Authentication Session Strategy]]
+- [[12-Architectural Decision Records(ADR)/ADR-011 Native Mobile Authentication|ADR-011 Native Mobile Authentication]]
+
+### Infrastructure and Operations
+
+- [[12-Architectural Decision Records(ADR)/ADR-008 Distributed Runtime State and Jobs|ADR-008 Distributed Runtime State and Jobs]]
+- [[12-Architectural Decision Records(ADR)/ADR-009 Private Asset Storage|ADR-009 Private Asset Storage]]
+- [[12-Architectural Decision Records(ADR)/ADR-010 LiveKit Media Boundary|ADR-010 LiveKit Media Boundary]]
+- [[12-Architectural Decision Records(ADR)/ADR-012 Observability Boundaries|ADR-012 Observability Boundaries]]
+
+## Record Index
+
 | ADR | Decision | Status |
 | --- | --- | --- |
 | [[12-Architectural Decision Records(ADR)/ADR-001 Multi-Tenancy Strategy|ADR-001]] | Shared-database multi-tenancy | Accepted |
@@ -14,5 +46,8 @@
 | [[12-Architectural Decision Records(ADR)/ADR-010 LiveKit Media Boundary|ADR-010]] | LiveKit media-provider boundary | Accepted |
 | [[12-Architectural Decision Records(ADR)/ADR-011 Native Mobile Authentication|ADR-011]] | Dedicated native auth endpoints | Accepted |
 | [[12-Architectural Decision Records(ADR)/ADR-012 Observability Boundaries|ADR-012]] | Optional, sanitized observability | Accepted |
+| [[12-Architectural Decision Records(ADR)/ADR-013 Monorepo Repository Strategy|ADR-013]] | npm-workspace monorepo with independent deployables | Accepted |
 
-Each record captures context, the chosen decision, explicit pros and cons, alternative decisions with their pros and cons, and consequences. Last reviewed against the implementation on 2026-09-13.
+Each record captures context, the chosen decision, explicit pros and cons,
+alternative decisions with their pros and cons, consequences, and revisit
+triggers. Last reviewed against the implementation on 2026-09-14.
