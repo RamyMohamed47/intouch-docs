@@ -36,6 +36,6 @@ the application repository.
 - Realtime contract: `.agents/sockets/Socket Events.md` and `@intouch/shared/realtime`
 - Database model: `.agents/database/ERD.md`
 - Implementation guidance: `.agents/AI_CONTEXT.md`, `.agents/PROJECT_STRUCTURE.md`, and `.agents/IMPLEMENTAION_GUIDE.md`
-- Mirrored repository context: [[90-Engineering Context/Readme|Engineering Context]]
+- Mirrored repository context: [[InTouch/15-Engineering Context/Readme|Engineering Context]]
 
 Last aligned with the repository: 2026-09-14.

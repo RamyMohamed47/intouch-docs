@@ -6,7 +6,7 @@ indexes, and transaction boundaries.
 ## Contents
 
 - [[04-Database/Entities|Entities]] provides the human-readable entity map.
-- [[90-Engineering Context/database/ERD|Canonical ERD Mirror]] contains the
+- [[ERD|Canonical ERD Mirror]] contains the
   field-level model mirrored from `.agents/database/ERD.md`.
 - [[Diagrams/Entity Diagrams|Entity Diagrams]] provides visual context.
 

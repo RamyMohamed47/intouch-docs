@@ -1,6 +1,6 @@
 # Database Entities
 
-MongoDB is the durable source of truth. The canonical field-level model and indexes are in [[90-Engineering Context/database/ERD|ERD]].
+MongoDB is the durable source of truth. The canonical field-level model and indexes are in [[ERD|ERD]].
 
 ## Identity and Delivery
 
