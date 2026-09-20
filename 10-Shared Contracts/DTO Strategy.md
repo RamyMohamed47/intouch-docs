@@ -122,6 +122,13 @@ public sender summary, message type, short excerpt, and deletion state; storage
 
 records and notification-deduplication metadata remain private.
 
+Voice-note creation uses a strict branch of the message input union containing
+one `voiceNoteUploadId` and an optional reply target only. The public
+`voiceNote` DTO exposes an opaque asset ID, canonical duration, and exactly 64
+normalized waveform peaks. It never exposes storage keys, codec inspection
+details, signed URLs, or recorded bytes, and voice-note audio is not duplicated
+in the generic attachments array.
+
 Notification preferences are strict all-fields category replacements plus the
 
 caller's currently active workspace/conversation mutes. Missing persistence

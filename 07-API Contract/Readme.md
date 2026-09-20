@@ -11,6 +11,6 @@ cross-cutting API rules.
 4. [[07-API Contract/Error Response|Error Responses]]
 
 Resource guides cover organizations, memberships, categories, conversations,
-and messages. The machine-readable source is documented under
+messages, and dedicated voice-note behavior. The machine-readable source is documented under
 [[09-OpenAPI/Readme|OpenAPI]]. Shared runtime schemas are documented under
 [[10-Shared Contracts/Readme|Shared Contracts]].

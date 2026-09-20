@@ -3,6 +3,10 @@
 This section documents the Next.js browser client, its server/client boundary,
 state ownership, security headers, and realtime/media integration.
 
+Dedicated voice-note recording and playback behavior is documented in
+[[03-Architecture/Voice Notes|Voice Notes]] and
+[[06-Frontend/Web Architecture|Web Architecture]].
+
 ## Contents
 
 - [[06-Frontend/Web Architecture|Web Architecture]]

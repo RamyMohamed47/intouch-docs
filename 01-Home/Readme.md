@@ -16,5 +16,5 @@ This section is the entry point for the InTouch engineering documentation.
 
 Human-facing documentation lives in the numbered sections of this vault.
 Repository-facing engineering context is mirrored under
-[[InTouch/15-Engineering Context/Readme|Engineering Context]] and identifies its
+[[15-Engineering Context/Readme|Engineering Context]] and identifies its
 canonical `.agents` source.

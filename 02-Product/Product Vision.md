@@ -14,7 +14,7 @@ InTouch is a multi-tenant communication platform for organizations that combines
 
 - Email/password and Google authentication for browser and native mobile clients.
 - Organization creation, public joining, invitations, owner administration, categories, public/private text channels, voice channels, and direct messages.
-- Text and attachment messages, replies, mentions, reactions, edits, redaction, typing, presence, unread counts, and read receipts.
+- Text, attachment, and voice-note messages; replies, mentions, reactions, edits, redaction, typing, presence, unread counts, and read receipts.
 - Durable in-app notifications, category preferences, timed/permanent mutes, Expo push, and incoming-call alerts.
 - LiveKit-powered audio/video direct calls, ten-person voice channels, camera controls, screen sharing, moderation, call history, and reconnect handling.
 - Echo AI summaries, action items, contextual answers, and composer transformations using consented, authorization-filtered context.
@@ -26,7 +26,7 @@ InTouch is a multi-tenant communication platform for organizations that combines
 
 - Public iOS acceptance, CallKit, Android Telecom, lock-screen call actions, and guaranteed offline VoIP wake.
 - Offline-first message storage, queued sends, and background synchronization.
-- Recording, transcription, SIP, end-to-end media encryption, and device-audio screen sharing.
+- Call/media recording, transcription, SIP, end-to-end media encryption, and device-audio screen sharing.
 - Threads, custom organization roles, bots, workflow automation, and organization analytics.
 
 The current product is beyond its original MVP. Future work should deepen reliability and native platform integration rather than reclassifying already shipped capabilities as future ideas.

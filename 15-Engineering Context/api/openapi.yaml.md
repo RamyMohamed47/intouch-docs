@@ -1285,6 +1285,7 @@ paths:
     get:
       tags: [Conversations]
       summary: List private-channel participants
+      description: Available to organization members who currently have access to the private channel. Participant mutations remain owner-only.
       parameters:
         - $ref: "#/components/parameters/ConversationId"
       responses:
@@ -3396,6 +3397,35 @@ components:
           minimum: 1
           maximum: 5242880
 
+    VoiceNoteUploadFileDescriptor:
+      type: object
+      additionalProperties: false
+      required: [fileName, contentType, size, durationMs, waveform]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          enum: [audio/mp4, audio/webm]
+        size:
+          type: integer
+          minimum: 1
+          maximum: 5242880
+        durationMs:
+          type: integer
+          minimum: 1000
+          maximum: 300000
+        waveform:
+          type: array
+          minItems: 64
+          maxItems: 64
+          items:
+            type: integer
+            minimum: 0
+            maximum: 100
+
     CreateUploadInput:
       oneOf:
         - type: object
@@ -3440,6 +3470,22 @@ components:
               maxItems: 5
               items:
                 $ref: "#/components/schemas/UploadFileDescriptor"
+        - type: object
+          additionalProperties: false
+          required: [purpose, conversationId, files]
+          properties:
+            purpose:
+              type: string
+              const: VOICE_NOTE
+            conversationId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+            files:
+              type: array
+              minItems: 1
+              maxItems: 1
+              items:
+                $ref: "#/components/schemas/VoiceNoteUploadFileDescriptor"
       discriminator:
         propertyName: purpose
 
@@ -3462,33 +3508,44 @@ components:
           pattern: "^[a-fA-F0-9]{24}$"
 
     CreateMessageInput:
-      type: object
-      additionalProperties: false
-      anyOf:
-        - required: [content]
-        - required: [uploadIds]
-      properties:
-        content:
-          type: string
-          minLength: 1
-          maxLength: 4000
-          pattern: ".*\\S.*"
-        uploadIds:
-          type: array
-          minItems: 1
-          maxItems: 5
-          uniqueItems: true
-          items:
-            type: string
-            pattern: "^[a-fA-F0-9]{24}$"
-        replyToMessageId:
-          type: string
-          pattern: "^[a-fA-F0-9]{24}$"
-        mentions:
-          type: array
-          maxItems: 25
-          items:
-            $ref: "#/components/schemas/MessageMention"
+      oneOf:
+        - type: object
+          additionalProperties: false
+          anyOf:
+            - required: [content]
+            - required: [uploadIds]
+          properties:
+            content:
+              type: string
+              minLength: 1
+              maxLength: 4000
+              pattern: ".*\\S.*"
+            uploadIds:
+              type: array
+              minItems: 1
+              maxItems: 5
+              uniqueItems: true
+              items:
+                type: string
+                pattern: "^[a-fA-F0-9]{24}$"
+            replyToMessageId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+            mentions:
+              type: array
+              maxItems: 25
+              items:
+                $ref: "#/components/schemas/MessageMention"
+        - type: object
+          additionalProperties: false
+          required: [voiceNoteUploadId]
+          properties:
+            voiceNoteUploadId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
+            replyToMessageId:
+              type: string
+              pattern: "^[a-fA-F0-9]{24}$"
 
     UpdateMessageInput:
       type: object
@@ -3779,7 +3836,7 @@ components:
           minimum: 1
         kind:
           type: string
-          enum: [IMAGE, FILE]
+          enum: [IMAGE, AUDIO, FILE]
         createdAt:
           type: string
           format: date-time
@@ -3823,7 +3880,28 @@ components:
           minimum: 1
         kind:
           type: string
-          enum: [IMAGE, FILE]
+          enum: [IMAGE, AUDIO, FILE]
+
+    VoiceNote:
+      type: object
+      additionalProperties: false
+      required: [assetId, durationMs, waveform]
+      properties:
+        assetId:
+          type: string
+          pattern: "^[a-fA-F0-9]{24}$"
+        durationMs:
+          type: integer
+          minimum: 1000
+          maximum: 300000
+        waveform:
+          type: array
+          minItems: 64
+          maxItems: 64
+          items:
+            type: integer
+            minimum: 0
+            maximum: 100
         createdAt:
           type: string
           format: date-time
@@ -3842,7 +3920,7 @@ components:
     MessageCore:
       type: object
       required:
-        [id, conversationId, senderId, content, messageType, editedAt, deletedAt, createdAt, updatedAt, attachments, mentions, replyTo]
+        [id, conversationId, senderId, content, messageType, editedAt, deletedAt, createdAt, updatedAt, attachments, voiceNote, mentions, replyTo]
       properties:
         id:
           type: string
@@ -3856,7 +3934,7 @@ components:
             - type: "null"
         messageType:
           type: string
-          enum: [TEXT, ATTACHMENT, CALL]
+          enum: [TEXT, ATTACHMENT, CALL, VOICE_NOTE]
         editedAt:
           oneOf:
             - type: string
@@ -3878,6 +3956,10 @@ components:
           maxItems: 5
           items:
             $ref: "#/components/schemas/Attachment"
+        voiceNote:
+          oneOf:
+            - $ref: "#/components/schemas/VoiceNote"
+            - type: "null"
         mentions:
           type: array
           maxItems: 25
@@ -3907,7 +3989,7 @@ components:
           maxLength: 160
         messageType:
           type: string
-          enum: [TEXT, ATTACHMENT, CALL]
+          enum: [TEXT, ATTACHMENT, CALL, VOICE_NOTE]
         deletedAt:
           type: [string, "null"]
           format: date-time

@@ -27,7 +27,7 @@ MongoDB is the durable source of truth. The canonical field-level model and inde
 
 | Entity | Responsibility |
 | --- | --- |
-| `Message` | `TEXT | ATTACHMENT | CALL`, caption, reply target, mention metadata, edit/redaction timestamps. |
+| `Message` | `TEXT | ATTACHMENT | VOICE_NOTE | CALL`, content, reply target, mention metadata, edit/redaction timestamps, and an optional claimed voice-note asset. |
 | `MessageReaction` | One normalized emoji reaction per user/message. |
 | `ConversationReadState` | Per-user high-water read position. |
 | `CallSession` | Durable DM call mode, status, terminal reason, timestamps, and timeline-message link. |
@@ -45,7 +45,7 @@ Reply previews and call summaries are hydrated views, not duplicated authoritati
 | `PushOutbox` | Durable ordinary push-delivery intent. |
 | `CallAlertOutbox` | Short-lived incoming-call push intent. |
 | `ChatWallpaperPreference` | Default or conversation-specific preset and dimming. |
-| `StoredAsset` | Private R2 object ownership, purpose, lifecycle, signature, and claim state. |
+| `StoredAsset` | Private R2 object ownership, purpose, lifecycle, signature, claim state, and optional declared/verified voice-note duration plus waveform metadata. |
 | `UploadDailyUsage` | Per-user daily upload quota accounting. |
 
 ## Persistence Rules
@@ -53,4 +53,5 @@ Reply previews and call summaries are hydrated views, not duplicated authoritati
 - Multi-document invariants use MongoDB transactions and therefore require a replica set or sharded cluster.
 - Soft/redacted message deletion preserves timeline ordering while removing content and attachment claims.
 - Provider room IDs, Redis leases, presigned URLs, credentials, and raw refresh/action tokens are not public DTO fields.
-- Existing records rely on safe defaults for later-added fields such as channel kind, mentions, replies, and notification preferences.
+- Voice-note audio is bulk-hydrated into `Message.voiceNote` and excluded from the generic attachments array.
+- Existing records rely on safe defaults for later-added fields such as channel kind, mentions, replies, voice notes, and notification preferences.

@@ -84,6 +84,8 @@ The custom metric vocabulary is deliberately bounded:
   duration without payloads or object keys.
 - `intouch.background_jobs.*`: bounded queue depth, job outcomes, and worker
   duration without BullMQ job IDs or payloads.
+- `intouch.voice_notes.*`: creation count, verified duration, bytes, and upload
+  failures without user/conversation IDs, filenames, URLs, or waveform data.
 - `intouch.runtime.*`: process memory, CPU time, uptime, and event-loop delay.
 - `intouch.dependency.ready`: binary MongoDB, Redis, and background-job state.
 
@@ -174,6 +176,10 @@ captured.
 
 Push delivery exports `intouch_push_outcomes_total` with the bounded `outcome`
 label values `sent`, `suppressed`, `rejected`, `retried`, and `failed`.
+
+Voice-note failures are sanitized before reaching logs or Sentry. Telemetry
+must not include recorded audio, declared filenames, signed URLs, asset IDs, or
+waveform samples.
 
 ## Incident Workflow
 

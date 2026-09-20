@@ -2,7 +2,7 @@
 
 This vault documents the implemented InTouch platform. Human-facing material
 is organized into numbered sections. Repository-facing copies under
-`90-Engineering Context` mirror canonical engineering notes from `.agents` in
+`15-Engineering Context` mirror canonical engineering notes from `.agents` in
 the application repository.
 
 ## Current Snapshot
@@ -11,7 +11,7 @@ the application repository.
 - 95 documented REST operations across 70 path templates.
 - 23 typed Socket.IO events: 7 client events and 16 server events.
 - MongoDB transactions, Redis distributed runtime state, and BullMQ durable jobs.
-- Private Cloudflare R2 assets, LiveKit audio/video/screen sharing, Gemini-powered Echo, Expo push, OpenTelemetry, Grafana, and Sentry.
+- Private Cloudflare R2 assets and voice notes, LiveKit audio/video/screen sharing, Gemini-powered Echo, Expo push, OpenTelemetry, Grafana, and Sentry.
 - Android-first mobile client through Mobile V2.0; iOS runtime acceptance and native call-system integration remain deferred.
 
 ## Start Here
@@ -36,6 +36,6 @@ the application repository.
 - Realtime contract: `.agents/sockets/Socket Events.md` and `@intouch/shared/realtime`
 - Database model: `.agents/database/ERD.md`
 - Implementation guidance: `.agents/AI_CONTEXT.md`, `.agents/PROJECT_STRUCTURE.md`, and `.agents/IMPLEMENTAION_GUIDE.md`
-- Mirrored repository context: [[InTouch/15-Engineering Context/Readme|Engineering Context]]
+- Mirrored repository context: [[15-Engineering Context/Readme|Engineering Context]]
 
-Last aligned with the repository: 2026-09-14.
+Last aligned with the repository: 2026-09-21.

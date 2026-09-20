@@ -14,7 +14,8 @@ It is designed to be readable both on GitHub and as an Obsidian vault.
 - npm workspace monorepo containing an Express API, Next.js web client, Expo
   mobile client, and shared Zod contracts.
 - Public/private text channels, direct messages, replies, mentions, reactions,
-  attachments, typing, presence, unread state, and read receipts.
+  attachments, cross-platform voice notes, typing, presence, unread state, and
+  read receipts.
 - LiveKit audio/video direct calls, ten-person voice channels, camera controls,
   Android screen sharing, moderation, and durable call history.
 - Gemini-powered Echo summaries, action items, contextual answers, and composer
@@ -56,7 +57,7 @@ It is designed to be readable both on GitHub and as an Obsidian vault.
 | [12 - ADRs](12-Architectural%20Decision%20Records%28ADR%29/Readme.md) | Architectural decisions and trade-offs |
 | [13 - Infrastructure](13-Infrastructure/Readme.md) | Redis, BullMQ, observability, AI, and local infrastructure |
 | [14 - Mobile](14-Mobile/Readme.md) | Mobile architecture and release history |
-| [90 - Engineering Context](InTouch/15-Engineering%20Context/Readme.md) | Mirrors of canonical repository-facing engineering notes |
+| [15 - Engineering Context](15-Engineering%20Context/Readme.md) | Mirrors of canonical repository-facing engineering notes |
 | [Diagrams](Diagrams/High%20Level%20Architecture.md) | Architecture, data-flow, entity, and sequence diagrams |
 
 `Garage.md`, `Progress.md`, `Journal`, and `Templates` are working areas rather
@@ -74,9 +75,10 @@ than authoritative system documentation.
 
 1. [System Architecture](03-Architecture/Architecture.md)
 2. [Architecture Principles](03-Architecture/Architecture%20Principles.md)
-3. [Database Entities](04-Database/Entities.md)
-4. [ADR Index](12-Architectural%20Decision%20Records%28ADR%29/Readme.md)
-5. [High-Level Architecture Diagram](Diagrams/High%20Level%20Architecture.md)
+3. [Voice Notes](03-Architecture/Voice%20Notes.md)
+4. [Database Entities](04-Database/Entities.md)
+5. [ADR Index](12-Architectural%20Decision%20Records%28ADR%29/Readme.md)
+6. [High-Level Architecture Diagram](Diagrams/High%20Level%20Architecture.md)
 
 ### API Consumer
 
@@ -105,7 +107,7 @@ The application repository remains authoritative for executable behavior:
 - Engineering guidance: `.agents/AI_CONTEXT.md`, `.agents/PROJECT_STRUCTURE.md`,
   and `.agents/IMPLEMENTAION_GUIDE.md`
 
-Files under [90 - Engineering Context](InTouch/15-Engineering%20Context/Readme.md) are
+Files under [15 - Engineering Context](15-Engineering%20Context/Readme.md) are
 mirrors of those canonical sources. Update the application repository first,
 validate the change against the implementation, and then refresh the mirror.
 The numbered sections in this repository are the canonical human-facing
@@ -142,8 +144,9 @@ No community plugins are required to read the documentation.
 
 ## Current Scope
 
-The documentation is aligned through Mobile V2.0. Public iOS acceptance,
-native call-system integration, guaranteed offline call wake, offline-first
-messaging, recording, transcription, and SIP remain deliberately deferred.
+The documentation is aligned through Mobile V2.0 and the cross-platform voice
+notes release. Public iOS acceptance, native call-system integration,
+guaranteed offline call wake, offline-first messaging, call/media recording,
+transcription, and SIP remain deliberately deferred.
 
-Last aligned with the application repository: 2026-09-14.
+Last aligned with the application repository: 2026-09-21.

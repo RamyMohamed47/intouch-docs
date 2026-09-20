@@ -17,7 +17,9 @@
 
 - Conversations are `CHANNEL` or `DIRECT`; channels have immutable `TEXT` or `VOICE` kinds.
 - Text channels may be public or private. Direct conversations are one-to-one and organization-scoped.
-- Messages support text, private attachments, replies, UTF-16 mention ranges, one reaction per user, editing, redacted deletion, receipts, and immutable call entries.
+- Messages support text, private attachments, dedicated voice notes, replies, UTF-16 mention ranges, one reaction per user, editing, redacted deletion, receipts, and immutable call entries.
+- Voice notes are available in direct messages and text channels, last from one second to five minutes, use one private audio asset up to 5 MB, and carry exactly 64 normalized waveform peaks.
+- Voice notes support replies, reactions, receipts, unread state, notifications, and redaction, but not captions, mentions, editing, ordinary attachments, or transcription.
 - Message writes use REST. Socket.IO distributes committed facts and invalidation events.
 
 ## Realtime and Notifications

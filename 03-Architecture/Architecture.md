@@ -28,7 +28,7 @@ Controllers and socket handlers never own business rules. Services coordinate po
 
 ## External Boundaries
 
-- **Cloudflare R2:** private object bytes; MongoDB stores ownership and lifecycle metadata.
+- **Cloudflare R2:** private object bytes for attachments, profile media, and voice notes; MongoDB stores ownership, lifecycle, and verified voice-note metadata.
 - **LiveKit Cloud:** encrypted WebRTC signaling and media; InTouch authorizes every session and persists call lifecycle.
 - **Gemini:** Echo generation behind a provider-neutral AI interface, explicit consent, and authorized context selection.
 - **Brevo/SMTP:** transactional mail sent from an encrypted MongoDB outbox.
@@ -40,7 +40,7 @@ Controllers and socket handlers never own business rules. Services coordinate po
 
 | State | Authority |
 | --- | --- |
-| Users, sessions, organizations, messages, calls, notifications, asset metadata | MongoDB |
+| Users, sessions, organizations, messages, calls, notifications, asset and voice-note metadata | MongoDB |
 | Presence, typing, socket limits, voice admission, dedupe leases | Redis |
 | Delayed/retryable job scheduling | BullMQ with MongoDB outbox/reconciliation where durability is required |
 | Media tracks and transient participant transport | LiveKit |

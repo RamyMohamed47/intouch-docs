@@ -10,13 +10,13 @@ chat-wallpapers/    preset and preference contracts
 common/             identifiers, dates, errors, health/readiness
 conversations/      channels, DMs, participants, receipts
 memberships/        roles, presence, invitations
-messages/           messages, mentions, replies, reactions
+messages/           messages, voice notes, mentions, replies, reactions
 notifications/      inbox, preferences, mutes
 organizations/      organization inputs and DTOs
 push/               installation/token registration
 realtime/           Socket.IO auth, acknowledgements, event maps
 search/             organization search requests/results
-uploads/            upload tickets, assets, attachment DTOs
+uploads/            upload tickets, assets, attachment/voice-note DTOs
 users/              safe user/profile DTOs
 voice/              sessions, calls, credentials, occupancy
 ~~~

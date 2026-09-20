@@ -18,6 +18,7 @@
 - LiveKit voice channels and audio/video direct calls.
 - Camera, screen sharing, fullscreen viewing, moderation, call history, tones, and browser call notifications.
 - Echo AI assistant, organization search, replies, mentions, notification preferences, and scoped mutes.
+- Dedicated web and Android voice notes with private R2 storage, verified duration/codec metadata, waveform seeking, and variable-speed playback.
 
 ### Mobile V1 to V2
 
@@ -32,11 +33,12 @@
 3. Load and failure testing for Socket.IO, Redis admission, BullMQ recovery, search, push, AI quotas, and call lifecycle.
 4. Deployment runbooks, alert thresholds, restore drills, and cost/capacity baselines.
 5. Accessibility and UX polish across web and mobile.
+6. Adding github actions CI/CD pipeline
 
 ## Later Candidates
 
 - Offline-first mobile cache and queued sends.
 - Threads, custom roles, bots, automation, and organization analytics.
-- Recording, transcription, SIP, E2EE, and device-audio screen sharing after privacy and cost design.
+- Call/media recording, transcription, SIP, E2EE, and device-audio screen sharing after privacy and cost design.
 
 Local Docker remains infrastructure-only: the API, web app, shared watcher, and mobile Metro process run natively.

@@ -2,8 +2,8 @@
 
 The web client is a Next.js App Router application under `apps/web`. It
 provides browser authentication, workspace administration, text collaboration,
-Echo, search, notifications, private assets, and LiveKit audio/video/screen
-sharing.
+voice-note recording/playback, Echo, search, notifications, private assets,
+and LiveKit audio/video/screen sharing.
 
 ## Routing and Rendering
 
@@ -42,7 +42,9 @@ TanStack Query.
 
 The Next.js proxy applies a nonce-based Content Security Policy and explicit
 permissions, referrer, and content-type headers. CSP origins are exact and
-environment-driven for Socket.IO, LiveKit, Sentry, and R2.
+environment-driven for Socket.IO, LiveKit, Sentry, and R2. The exact
+`NEXT_PUBLIC_R2_ORIGIN` is admitted to `media-src` so private signed voice-note
+URLs can play without broad storage wildcards.
 
 Private files use API-authorized short-lived URLs. Browser uploads go directly
 to presigned R2 targets and are completed and claimed through the API. Provider
@@ -54,6 +56,17 @@ Socket.IO carries presence, typing, receipts, message/reaction updates,
 notification state, voice occupancy, and call lifecycle. LiveKit alone carries
 WebRTC signaling and media. REST remains authoritative for durable writes and
 recovery after missed realtime events.
+
+## Voice Notes
+
+The browser records voice notes only in a secure context, prefers Opus/WebM,
+and falls back to AAC/MP4 where supported. Recording is foreground-only and is
+disabled during a LiveKit session. The composer exposes pause, resume, cancel,
+send, final-countdown, retry, and discard states without persisting a draft.
+
+Playback requests a short-lived asset URL lazily, refreshes it once after an
+access failure, and coordinates one active player across the client. Dedicated
+bubbles provide waveform seeking and `1x`, `1.5x`, and `2x` speeds.
 
 ## Verification
 
