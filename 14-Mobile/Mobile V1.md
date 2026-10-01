@@ -99,7 +99,11 @@ links target the `intouch://` scheme and retain the HTTPS web link as fallback.
 ## Runtime Behavior
 
 - TanStack Query is authoritative for organizations, conversations, messages,
-  presence, reactions, and receipts.
+  presence, reactions, and receipts. Handled 4xx API responses are not
+  retried; network and 5xx failures receive at most two bounded retries.
+- Conversation screens wait for conversation metadata before loading message
+  history or exact-message context. Direct messages and text channels load those
+  queries; voice-only channels never call message endpoints.
 - Socket.IO carries the access token in the handshake and reconnects only while
   the app is active.
 - Foreground restoration refreshes credentials, reconnects, resubscribes, and

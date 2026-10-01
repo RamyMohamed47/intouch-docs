@@ -36,7 +36,10 @@ session restoration before deciding whether to render or redirect.
 - Local component state owns transient dialogs, menus, drafts, and controls.
 
 The client does not maintain a second durable message or presence store beside
-TanStack Query.
+TanStack Query. Only the currently owned LiveKit `Room` may update voice UI
+state. Audio attachments and cleanup are scoped per room, stale room callbacks
+are ignored, and automatic session restoration uses the same serialized
+transition gate as manual voice actions.
 
 ## Security and Private Assets
 

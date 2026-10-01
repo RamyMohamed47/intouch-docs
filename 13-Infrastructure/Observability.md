@@ -94,6 +94,12 @@ query strings, bucket keys, or presigned URLs as metric labels or span
 attributes. High-cardinality identifiers belong only in tightly controlled
 logs when already permitted by the domain's logging policy.
 
+Expected HTTP rejections use bounded structured log fields: request method,
+normalized route template, application code, status code, and a safe reason. The
+route field uses templates instead of concrete path parameters or query strings.
+Unmatched 404 requests use the generic reason `Route not found`; throttling is
+logged at warning level and other expected 4xx responses at informational level.
+
 ## Sentry
 
 Create separate Sentry projects for `intouch-api`, `intouch-web`, and
