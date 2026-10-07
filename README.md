@@ -149,4 +149,4 @@ notes release. Public iOS acceptance, native call-system integration,
 guaranteed offline call wake, offline-first messaging, call/media recording,
 transcription, and SIP remain deliberately deferred.
 
-Last aligned with the application repository: 2026-09-21.
+Last aligned with the application repository: 2026-10-07.

@@ -38,4 +38,4 @@ the application repository.
 - Implementation guidance: `.agents/AI_CONTEXT.md`, `.agents/PROJECT_STRUCTURE.md`, and `.agents/IMPLEMENTAION_GUIDE.md`
 - Mirrored repository context: [[15-Engineering Context/Readme|Engineering Context]]
 
-Last aligned with the repository: 2026-09-21.
+Last aligned with the repository: 2026-10-07.

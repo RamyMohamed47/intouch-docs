@@ -10,6 +10,7 @@ InTouch serves a same-origin-proxied browser application and a native Expo clien
 
 - Issue approximately 15-minute Bearer JWT access tokens with minimal claims.
 - Persist approximately 30-day refresh sessions as hashes and rotate on every refresh.
+- Accept the immediately previous refresh token for 30 seconds after a rotation and answer it with a fresh pair. The window is anchored to the original rotation and is not extended by retries; reuse after it revokes the session.
 - Browser login sets the refresh token in an HttpOnly, Secure-in-production cookie. Refresh/logout require an allowlisted Origin and CSRF header; access tokens remain in memory.
 - Native mobile endpoints return the refresh token in strict response bodies. The app stores it in Expo SecureStore and sends it only to dedicated mobile refresh/logout routes.
 - Password reset revokes all sessions. Google provider tokens are discarded after identity verification.
@@ -28,6 +29,7 @@ InTouch serves a same-origin-proxied browser application and a native Expo clien
 **Cons**
 
 - Requires session persistence, rotation race handling, and serialized client refresh attempts.
+- The 30-second grace window trades a short replay opportunity for a stolen previous token against signing users out whenever a refresh response is lost on an unreliable network.
 - Browser refresh/logout need Origin and CSRF protection in addition to cookie settings.
 - Web and native clients require separate endpoint contracts and tests.
 
@@ -65,7 +67,8 @@ InTouch serves a same-origin-proxied browser application and a native Expo clien
 
 ## Consequences
 
-- Refresh sessions are individually revocable and replay-resistant.
+- Refresh sessions are individually revocable and replay-resistant outside the 30-second retry window.
+- Clients end a stored session only when the API explicitly rejects the credential (400/401). Network failures, throttling, and server errors keep the session and offer a retry.
 - Browser JavaScript cannot access refresh credentials.
 - Native clients avoid cookie/CSRF assumptions while preserving the same rotation repository and policies.
 - Client implementations must serialize refresh attempts and retry a failed protected request at most once.

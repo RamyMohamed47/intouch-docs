@@ -10,6 +10,7 @@ One InTouch user may authenticate with password and Google. Provider email/profi
 
 - Store provider identities in `LoginProvider`, keyed by provider plus verified subject.
 - Link Google to an existing user only through a provider-verified email address.
+- A password on an account whose email was never confirmed is not proof of ownership. When Google verifies the email of a still-pending password account, the link removes that unverified password, its verification/reset tokens, queued mail, and sessions in the same transaction. The owner can add a password later through password reset. Verified accounts keep their password when Google is linked.
 - Browser authentication uses the backend-owned authorization-code flow; native mobile supplies an ID token that the backend verifies for signature, issuer, expiry, audience, and verified email.
 - Discard Google access/refresh tokens after verification. InTouch continues to issue its own access and rotating refresh sessions.
 - Refresh the external Google avatar fallback on successful Google authentication unless the user has selected a private uploaded avatar; never proxy or permanently copy provider image bytes automatically.
@@ -67,6 +68,7 @@ One InTouch user may authenticate with password and Google. Provider email/profi
 ## Consequences
 
 - Email alone is never trusted from a client payload.
+- Registering someone else's email with a chosen password cannot become access to their account: the unverified password is discarded when the real owner signs in with Google.
 - Provider subject changes cannot silently take over another user.
 - Password and Google login converge on the same InTouch user/session/authorization model.
 - Additional providers can be added without adding provider-specific fields to `User`.

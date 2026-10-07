@@ -7,6 +7,7 @@ client artifact.
 | --- | --- | --- |
 | API runtime | database, Redis, provider keys, token secrets | Server-only secrets in the API environment |
 | Web server | `BACKEND_ORIGIN`, source-map upload credentials | Server/build environment only |
+| Web and API shared | `PROXY_CLIENT_IP_SECRET` | Same server-only value on both services; never `NEXT_PUBLIC_` |
 | Web public | `NEXT_PUBLIC_SOCKET_ORIGIN`, LiveKit URL, exact `NEXT_PUBLIC_R2_ORIGIN`, public Sentry DSN | Embedded in browser code; never secret |
 | Mobile public | `EXPO_PUBLIC_API_URL`, Google web client ID, public Sentry DSN | Embedded in the application binary; never secret |
 | EAS build-only | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Used during build and not exposed as public runtime configuration |

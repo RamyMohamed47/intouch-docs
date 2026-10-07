@@ -20,6 +20,10 @@
 
 - Access JWTs are approximately 15 minutes and contain minimal claims.
 - Refresh sessions are approximately 30 days, stored as hashes, rotated on use, and revocable.
+- The immediately previous refresh token is accepted for 30 seconds after rotation so a lost response can be retried; later reuse revokes the session.
 - Password reset revokes all refresh sessions.
 - Google provider tokens are discarded after verification.
+- Google sign-in for an email that has a still-pending password account links Google and removes the unverified password.
 - Login and email-action endpoints are rate limited; production counters are shared through Redis.
+- Password login is limited to ten attempts per account and client address in fifteen minutes, with a higher account-wide ceiling across all addresses.
+- Requests through the web proxy are rate limited by the browser address, which the proxy forwards together with a shared secret.

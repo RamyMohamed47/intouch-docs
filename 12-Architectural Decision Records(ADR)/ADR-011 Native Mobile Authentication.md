@@ -6,7 +6,7 @@
 
 Keep browser cookie endpoints unchanged and add dedicated native login, Google, refresh, and logout routes. Native Google sign-in supplies an ID token; the API verifies signature, issuer, expiry, verified email, and expected web-client audience before linking identity.
 
-The Expo client stores rotating refresh credentials in SecureStore and access credentials in memory. Email verification/reset requests may select mobile delivery links with an HTTPS web fallback.
+The Expo client stores rotating refresh credentials in SecureStore and access credentials in memory. It deletes the stored credential only when the API rejects it; when the API cannot be reached at launch the app keeps the credential and shows a retry state instead of the login screen. Email verification/reset requests may select mobile delivery links with an HTTPS web fallback.
 
 
 ## Decision Trade-offs

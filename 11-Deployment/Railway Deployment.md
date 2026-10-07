@@ -29,6 +29,13 @@ outage cannot remove a healthy application replica from service.
 REST/OAuth proxy. Browser-visible origins for Socket.IO, LiveKit, R2, and Sentry
 use narrowly scoped `NEXT_PUBLIC_*` configuration.
 
+`PROXY_CLIENT_IP_SECRET` must hold the same value on the web and API services.
+The proxy calls the API server-side, so without it the API sees every browser
+user as the web service's address and per-address rate limits become one
+shared bucket. With it, the proxy forwards the browser address and the API
+trusts that header only when the secret matches. The API logs a startup warning
+in production when the secret is missing.
+
 ## External Production Services
 
 - MongoDB Atlas owns durable production data.

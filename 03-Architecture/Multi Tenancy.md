@@ -25,4 +25,6 @@ Users, authentication sessions, action tokens, default wallpaper preferences, an
 
 ## Deletion and Revocation
 
-Organization, membership, private-access, and conversation changes revoke affected sockets, media participants, Redis leases, and private-asset access after the durable mutation commits. Cleanup is idempotent and retried when providers are unavailable.
+Organization deletion, private-access changes, and conversation changes revoke affected sockets, media participants, Redis leases, and private-asset access after the durable mutation commits. Cleanup is idempotent and retried when providers are unavailable.
+
+Removing a member from an organization, or leaving one, is not implemented: memberships end only when the organization is deleted. Membership-level revocation must be designed together with that feature.
